@@ -294,7 +294,7 @@ def get_results(host, mode, hit_id):
   
   print "Done" 
 
-def runner():
+def go():
   if action=="create hit":
     create_hit(settings)
 
