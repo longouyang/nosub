@@ -294,10 +294,11 @@ def get_results(host, mode, hit_id):
   
   print "Done" 
 
-if action=="create hit":
-  create_hit(settings)
+def runner():
+  if action=="create hit":
+    create_hit(settings)
 
-if action=="get results":
-  if hit_id is None:
-    sys.exit("You haven't created the hit on Turk yet (mode: %s)" % mode)
-  get_results(HOST, mode, hit_id)
+  if action=="get results":
+    if hit_id is None:
+      sys.exit("You haven't created the hit on Turk yet (mode: %s)" % mode)
+    get_results(HOST, mode, hit_id)
