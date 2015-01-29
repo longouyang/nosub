@@ -301,9 +301,8 @@ def add_assignments(hit, n):
   res = mtc.extend_hit(hit_id = hit["id"],
                        assignments_increment = n)
   
-def go():
-
-  if hit["id"] is None and action is not "status":
+def go(): 
+  if not (action in ["status", "create hit"]) and hit["id"] is None:
     sys.exit("You haven't created the hit on Turk yet (mode: %s)" % mode)
   
   if action == "create hit":
