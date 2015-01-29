@@ -44,6 +44,8 @@ if len(argv) == 0:
 if not os.path.isfile("auth.json"):
   sys.exit("Couldn't find credentials file auth.json")
 
+action = " ".join(argv).lower()
+
 auth_data = json.load(open("auth.json", "r"))
 ACCESS_ID = auth_data["access_id"]
 SECRET_KEY = auth_data["secret_key"]
@@ -122,20 +124,18 @@ settings_log_raw = json.loads(settings_log_text) if settings_log_text else setti
 settings_in_log = parse_settings(settings_log_raw)
 settings_in_file = parse_settings(settings_raw)
 
-action = " ".join(argv[0:2])
-
 settings_modified = (action is not "show status" and settings_in_log is not settings_in_file)
 
 # TODO: bail if settings modified
 
 settings = settings_in_file
 
-hit_ids = dict()
-hit_id = None
+hit_modes = dict()
+hit = None
 
-if os.path.isfile("hit_ids.json"):
-  hit_ids = json.load(open("hit_ids.json", "r"))
-  hit_id = hit_ids[mode]["hit_id"]
+if os.path.isfile("hit_modes.json"):
+  hit_modes = json.load(open("hit_modes.json", "r"))
+  hit = hit_modes[mode]
 
 mtc = connection.MTurkConnection(aws_access_key_id=ACCESS_ID,
                                  aws_secret_access_key=SECRET_KEY,
@@ -177,8 +177,9 @@ def humane_timedelta(delta, precise=False, fromDate=None):
     return text
 
 def create_hit(settings):
+  global hit
   ## make sure there isn't already a hit
-  if (hit_id is not None):
+  if (hit is not None):
     sys.exit("It looks like you already created the hit (mode: %s)" % mode)
   
   hit_quals = Qualifications() 
@@ -193,7 +194,7 @@ def create_hit(settings):
                                                           settings_quals["approval_percentage"]))
 
   ## NB: max_assignments and lifetime are different for sandbox versus production
-  hit_settings = dict(
+  request_settings = dict(
     title           = settings["title"],
     description     = settings["description"],
     keywords        = settings["keywords"],
@@ -205,31 +206,29 @@ def create_hit(settings):
     lifetime        = timedelta(days = 7) if in_sandbox else timedelta(seconds = 30),
     qualifications  = hit_quals
   ) 
-  create_hit_result = mtc.create_hit(**hit_settings)
-  
-  hit = create_hit_result[0]
+  create_result = mtc.create_hit(**request_settings)[0] 
 
-  hit_data = dict()
-  hit_data[mode] = dict(
-    hit_id = hit.HITId,
+  hit = {
+    "id": create_result.HITId,
     # hit_group_id = hit.HITGroupId,
-    hit_type_id = hit.HITTypeId)
+    "type_id": create_result.HITTypeId
+  }
 
-  print("  Successfully created HIT")
-  # print("\n".join(["  HIT ID      : %s" % hit_id,
-  #                  # "  HIT Group ID: %s" % hit.hit_group_id,
-  #                  "  HIT Type ID : %s" % hit_type_id]))
+  hit_modes[mode] = hit
 
-  print("* Because you are in %s mode, the number of initial assignments is set to %s and the initial HIT lifetime is set to %s" % (mode, hit_settings["max_assignments"], humane_timedelta(hit_settings["lifetime"])))
-
+  print("Successfully created HIT")
   ## write hit and HITTypeId into even-odd.json
-  with open("hit_ids.json", 'w') as new_settings_file:
-    json.dump(hit_data, new_settings_file, indent=4, separators=(',', ': '))
-    print("  Wrote HIT ID and HIT Type ID to hit_ids.json")
+  with open("hit_modes.json", 'w') as new_settings_file:
+    json.dump(hit_modes, new_settings_file, indent=4, separators=(',', ': '))
+    print("Wrote HIT ID and HIT Type ID to hit_modes.json")
 
+  print("\n".join(["Because you are in %s mode:" % mode, 
+                   "- the number of initial assignments is set to %s" % request_settings["max_assignments"],
+                   "- the initial HIT lifetime is set to %s" % humane_timedelta(request_settings["lifetime"])]))
+    
   print("")
   print("Link to manage HIT: ")
-  print(HOST_requester + "/mturk/manageHIT?HITId=" + hit.HITId)
+  print(HOST_requester + "/mturk/manageHIT?HITId=" + hit["id"])
 
   # # todo: boto isn't returning HITGroupId atm. how does CLT do it?
   # print("")
@@ -291,17 +290,48 @@ def get_results(host, mode, hit_id):
       f.write(jsonData)
     
     print("Wrote   " + aId)
-  
   print("Done")
 
+
+def add_time(hit, n):
+  res = mtc.extend_hit(hit_id = hit["id"],
+                       expiration_increment = n)
+
+def add_assignments(hit, n):
+  res = mtc.extend_hit(hit_id = hit["id"],
+                       assignments_increment = n)
+  
 def go():
-  if action=="create hit":
+
+  if hit["id"] is None and action is not "status":
+    sys.exit("You haven't created the hit on Turk yet (mode: %s)" % mode)
+  
+  if action == "create hit":
     create_hit(settings)
 
-  if action=="get results":
-    if hit_id is None:
-      sys.exit("You haven't created the hit on Turk yet (mode: %s)" % mode)
-    get_results(HOST, mode, hit_id)
+  if action == "get results":
+    get_results(HOST, mode, hit["id"])
 
+  if re.match("^add ", action):
+    action_ = re.sub("add ","", action)
+    num_assignments = 0
+    td = None
+    # extract assignments
+    assignments_search = re.search("([0-9]+) *assignments", action_)
+    if (assignments_search):
+      num_assignments = int(assignments_search.group(1))
+      print("Adding %d assignments" % num_assignments)
+      action_ = re.sub(assignments_search.group(0), "", action_)
+      action_ = re.sub("and", "", action_)
+      add_assignments(hit, num_assignments)
+      print "-> Done"
+
+    # time parse the rests
+    seconds = timeparse(action_)
+
+    print("Adding %s" % humane_timedelta(timedelta(seconds = seconds))) 
+    add_time(hit, seconds)
+    print "-> Done" 
+    
 if __name__ == "__main__":
     go()
