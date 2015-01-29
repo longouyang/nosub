@@ -66,3 +66,7 @@ Now, you can perform these actions:
     cosub add <N> assignments
     cosub add <N> {days/hours/minutes}
     cosub get results
+
+## Etymology
+
+cosub is descended, in spirit, from Dan Lassiter's [Submiterator](https://github.com/danlassiter/Submiterator). The name means **c**hild **o**f **sub**miterator.
