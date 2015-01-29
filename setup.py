@@ -7,7 +7,7 @@ setup(name='cosub',
       author_email='long.ouyang@gmail.com',
       url='http://www.github.com/longouyang/cosub',
       packages=['cosub'],
-      setup_requires = ['boto','pytimeparse'],
+      install_requires = ['boto >= 2.33.0','pytimeparse >= 1.1.2'],
       entry_points = {
         'console_scripts': [
           'cosub = cosub.runner:go'
