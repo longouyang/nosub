@@ -31,12 +31,12 @@ if len(argv) == 0:
                    "Usage: ",
                    "",
                    "   cosub create hit",
-                   "   cosub update hit",
+                   "   cosub update hit (TODO)",
                    "   cosub add <N> assignments",
                    "   cosub add <N> {days/hours/minutes}",
-                   "   cosub expire",
-                   "   cosub show status",
-                   "   cosub get results",
+                   "   cosub expire      (TODO)",
+                   "   cosub show status (TODO)",
+                   "   cosub get results (HALF)",
                    ""
                  ]))
   sys.exit()
