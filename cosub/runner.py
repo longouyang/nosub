@@ -302,3 +302,6 @@ def go():
     if hit_id is None:
       sys.exit("You haven't created the hit on Turk yet (mode: %s)" % mode)
     get_results(HOST, mode, hit_id)
+
+if __name__ == "__main__":
+    go()
