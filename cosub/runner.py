@@ -27,7 +27,7 @@ argv = sys.argv[1:]
 
 ## TODO: add --comment flag
 if len(argv) == 0:
-  print "\n".join(["",
+  print("\n".join(["",
                    "Usage: ",
                    "",
                    "   cosub create hit",
@@ -38,7 +38,7 @@ if len(argv) == 0:
                    "   cosub show status",
                    "   cosub get results",
                    ""
-                 ]) 
+                 ]))
   sys.exit()
 
 if not os.path.isfile("auth.json"):
@@ -56,7 +56,7 @@ log_filename = "log.csv"
 
 # create a log if it doesn't exist
 if not os.path.isfile(log_filename):
-  print "- Creating " + log_filename
+  print("  Creating " + log_filename)
   with open(log_filename, 'w') as log_file:
     log_writer = csv.writer(log_file, delimiter=',', quotechar='"')
     log_writer.writerow(["Time", "Action", "Data"])
@@ -108,7 +108,7 @@ def parse_settings(dRaw):
 
   num_errors = len(error_messages)
   if len(error_messages) > 0:
-    print "Error%s parsing %s:" % ("" if num_errors == 1 else "s", settings_filename )
+    print("Error%s parsing %s:" % ("" if num_errors == 1 else "s", settings_filename))
     sys.exit("\n".join(error_messages))
   
   return d
@@ -215,17 +215,17 @@ def create_hit(settings):
     # hit_group_id = hit.HITGroupId,
     hit_type_id = hit.HITTypeId)
 
-  print "  Successfully created HIT"
-  # print "\n".join(["  HIT ID      : %s" % hit_id,
+  print("  Successfully created HIT")
+  # print("\n".join(["  HIT ID      : %s" % hit_id,
   #                  # "  HIT Group ID: %s" % hit.hit_group_id,
-  #                  "  HIT Type ID : %s" % hit_type_id])
+  #                  "  HIT Type ID : %s" % hit_type_id]))
 
-  print "* Because you are in %s mode, the number of initial assignments is set to %s and the initial HIT lifetime is set to %s" % (mode, hit_settings["max_assignments"], humane_timedelta(hit_settings["lifetime"]) )
+  print("* Because you are in %s mode, the number of initial assignments is set to %s and the initial HIT lifetime is set to %s" % (mode, hit_settings["max_assignments"], humane_timedelta(hit_settings["lifetime"])))
 
   ## write hit and HITTypeId into even-odd.json
   with open("hit_ids.json", 'w') as new_settings_file:
     json.dump(hit_data, new_settings_file, indent=4, separators=(',', ': '))
-    print "  Wrote HIT ID and HIT Type ID to hit_ids.json"
+    print("  Wrote HIT ID and HIT Type ID to hit_ids.json")
 
   print("")
   print("Link to manage HIT: ")
@@ -252,7 +252,7 @@ def get_results(host, mode, hit_id):
                                filter(lambda _: _.find(".json") > - 1,
                                       os.listdir(results_dir)))
   num_downloaded_assignments = len(downloaded_assignments)
-  print "Currently have " + str(num_downloaded_assignments) + " results" 
+  print("Currently have " + str(num_downloaded_assignments) + " results")
 
   if num_downloaded_assignments % int(page_size) == 0:
     num_downloaded_pages = (num_downloaded_assignments / int(page_size)) + 1
@@ -262,7 +262,7 @@ def get_results(host, mode, hit_id):
   ## submit a dummy request for page_size = 1 so that we can get the total number of assignments
   num_total_assignments = int( mtc.get_assignments(hit_id, page_size = 1).TotalNumResults )
   num_total_pages = int(math.ceil(num_total_assignments / page_size))
-  print "Mturk has " + str(num_total_assignments) + " results"
+  print("Mturk has " + str(num_total_assignments) + " results")
 
   if num_downloaded_assignments == num_total_assignments:
     sys.exit("Done")
@@ -270,7 +270,7 @@ def get_results(host, mode, hit_id):
   assignments_to_write = []
   
   for i in range(num_downloaded_pages, num_total_pages + 1):
-    print "Downloading page " + str(i) + " of results" 
+    print("Downloading page " + str(i) + " of results")
     assignments_to_write += mtc.get_assignments(hit_id, page_size = int(page_size), page_number = i)
   
   for a in assignments_to_write:
@@ -278,7 +278,7 @@ def get_results(host, mode, hit_id):
     
     ## if we've downloaded this one before, don't write to disk
     if aId in downloaded_assignments:
-      print "Skipped " + aId
+      print("Skipped " + aId)
       continue
     
     ## otherwise, write to disk
@@ -290,9 +290,9 @@ def get_results(host, mode, hit_id):
       jsonData = json.dumps(data, indent=4, separators=(',', ': '))
       f.write(jsonData)
     
-    print "Wrote   " + aId
+    print("Wrote   " + aId)
   
-  print "Done" 
+  print("Done")
 
 def go():
   if action=="create hit":
