@@ -76,7 +76,13 @@ with open(log_filename, 'r') as log_file:
     log.append(dict(zip(keys,row)))
 
 # compare settings to the most recent create / update entry in the log
-settings_raw = json.load(open(settings_filename, "r"))
+with open(settings_filename, "r") as f:
+  lines = f.readlines()
+  # remove comments in json
+  lines = map(lambda line: re.sub("/\*.*\*/", "", line), lines)
+  settings_file_contents = "".join(lines)
+
+settings_raw = json.loads(settings_file_contents)
 
 def my_timeparse(_s):
   s = re.sub("and","",_s) 
