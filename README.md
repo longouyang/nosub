@@ -17,8 +17,11 @@ The same HIT is often repurposed for multiple versions of the same experiment, s
 OSX:
 
 ```sh
+sudo pip install -U setuptools # only on Mavericks (10.9)
 sudo pip install git+git://github.com/longouyang/cosub.git
 ```
+
+Note that you probably only need to run the first line if you're on Mavericks.
 
 Windows:
 
