@@ -30,7 +30,7 @@ Note that you probably only need to run the first line if you're on Mavericks.
 Windows:
 
 ```sh
-TODO
+pip install git+git://github.com/longouyang/cosub.git
 ```
 
 ## Usage
