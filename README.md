@@ -10,6 +10,10 @@ Many behavioral scientists use a Mechanical Turk workflow where they create a si
 This corresponds to a single experiment with many participants.
 The same HIT is often repurposed for multiple versions of the same experiment, so there's a need for a HIT management tool that facilitates multiple rounds of data collection and updating.
 
+## Requirements
+
+Python and pip. See `requirements.txt` for the pip dependencies.
+
 ## Installation
 
 **Note: install instructions are likely to change**
