@@ -10,145 +10,13 @@ import json
 import math
 import re
 import os.path
+import pdb
 from pprint import pprint as pp
 from pytimeparse.timeparse import timeparse
-
 from boto.mturk.qualification import LocaleRequirement, PercentAssignmentsApprovedRequirement, Qualifications
+from boto.mturk.connection import MTurkRequestError
+import settings
 
-HOST = 'mechanicalturk.sandbox.amazonaws.com'
-
-in_sandbox = "sandbox" in HOST
-mode = "sandbox" if in_sandbox else "production"
-
-HOST_requester = "https://" + ("requestersandbox" if in_sandbox else "requester") + ".mturk.com"
-HOST_worker = "https://" + ("workersandbox" if in_sandbox else "www") + ".mturk.com"
-
-argv = sys.argv[1:]
-
-## TODO: add --comment flag
-if len(argv) == 0:
-  print("\n".join(["",
-                   "Usage: ",
-                   "",
-                   "   cosub create hit",
-                   "   cosub update hit (TODO)",
-                   "   cosub add <N> assignments",
-                   "   cosub add <N> {days/hours/minutes}",
-                   "   cosub expire      (TODO)",
-                   "   cosub show status (TODO)",
-                   "   cosub get results (HALF)",
-                   ""
-                 ]))
-  sys.exit()
-
-if not os.path.isfile("auth.json"):
-  sys.exit("Couldn't find credentials file auth.json")
-
-action = " ".join(argv).lower()
-
-auth_data = json.load(open("auth.json", "r"))
-ACCESS_ID = auth_data["access_id"]
-SECRET_KEY = auth_data["secret_key"]
-
-# get name of the settings file, append .json if necessary  
-settings_filename = "settings.json"
-#settings_filename = settings_filename + ("" if re.search("\.json$","settings_filename") else ".json")
-#stem = re.sub("\.json$", "", settings_filename)
-log_filename = "log.csv"
-
-# create a log if it doesn't exist
-if not os.path.isfile(log_filename):
-  print("  Creating " + log_filename)
-  with open(log_filename, 'w') as log_file:
-    log_writer = csv.writer(log_file, delimiter=',', quotechar='"')
-    log_writer.writerow(["Time", "Action", "Data"])
-
-# read log    
-log = []
-with open(log_filename, 'r') as log_file:
-  log_rows = []
-  log_reader = csv.reader(log_file, delimiter=',', quotechar='"')
-  for row in log_reader:
-    log_rows.append(row)
-
-  keys = log_rows[0]
-  for row in log_rows[1:]:
-    log.append(dict(zip(keys,row)))
-
-# compare settings to the most recent create / update entry in the log
-with open(settings_filename, "r") as f:
-  lines = f.readlines()
-  # remove comments in json
-  lines = map(lambda line: re.sub("/\*.*\*/", "", line), lines)
-  settings_file_contents = "".join(lines)
-
-settings_raw = json.loads(settings_file_contents)
-
-def my_timeparse(_s):
-  s = re.sub("and","",_s) 
-  return timeparse(s)
-
-def parse_settings(dRaw):
-  d = dRaw.copy()
-
-  # HT http://stackoverflow.com/q/9875660/351392 for the idiom
-  error_messages = []
-  
-  # timeparse the approval delay, duration, and lifetime fields
-  for k in ["auto_approval_delay", "assignment_duration"]:
-    d[k] = my_timeparse(d[k])
-    if d[k] is None:
-      error_messages.append("- %s must be a duration but it is set to: %s" % (k, dRaw[k])) 
-
-  # int parse the frame height and max assignments
-  for k in ["frame_height"]:
-    try:
-      d[k] = int(d[k])
-    except ValueError:
-      error_messages.append("- %s must be a number but it is set to: %s" % (k, dRaw[k]))
-
-  # float parse the reward
-  for k in ["reward"]:
-      try:
-        d[k] = float(d[k])
-      except ValueError:
-        error_messages.append("- %s must be a price but it is set to: %s" % (k, dRaw[k]))
-
-  num_errors = len(error_messages)
-  if len(error_messages) > 0:
-    print("Error%s parsing %s:" % ("" if num_errors == 1 else "s", settings_filename))
-    sys.exit("\n".join(error_messages))
-  
-  return d
-
-settings_log_text = None
-for line in log:
-  if line['Activity'] in ['Create', 'Update']:
-    settings_log_text = line['Data']
-settings_log_raw = json.loads(settings_log_text) if settings_log_text else settings_raw
-
-settings_in_log = parse_settings(settings_log_raw)
-settings_in_file = parse_settings(settings_raw)
-
-settings_modified = (action is not "show status" and settings_in_log is not settings_in_file)
-
-# TODO: bail if settings modified
-
-settings = settings_in_file
-
-hit_modes = dict()
-hit = None
-
-if os.path.isfile("hit_modes.json"):
-  hit_modes = json.load(open("hit_modes.json", "r"))
-  hit = hit_modes[mode]
-
-mtc = connection.MTurkConnection(aws_access_key_id=ACCESS_ID,
-                                 aws_secret_access_key=SECRET_KEY,
-                                 host=HOST)
-
-# convert a time delta to a humane string representation
-# adapted from http://code.activestate.com/recipes/578113-human-readable-format-for-a-given-time-delta/
 def humane_timedelta(delta, precise=False, fromDate=None):
     # the timedelta structure does not have all units; bigger units are converted
     # into given smaller ones (hours -> seconds, minutes -> seconds, weeks > days, ...)
@@ -182,6 +50,96 @@ def humane_timedelta(delta, precise=False, fromDate=None):
 
     return text
 
+## mode settings (sandbox vs production)
+HOST = 'mechanicalturk.sandbox.amazonaws.com'
+in_sandbox = "sandbox" in HOST
+mode = "sandbox" if in_sandbox else "production"
+HOST_requester = "https://" + ("requestersandbox" if in_sandbox else "requester") + ".mturk.com"
+HOST_worker = "https://" + ("workersandbox" if in_sandbox else "www") + ".mturk.com"
+
+argv = sys.argv[1:]
+
+## if no args, bail
+## TODO: add --comment flag
+if len(argv) == 0:
+  print("\n".join(["",
+                   "Usage: ",
+                   "",
+                   "   cosub create hit",
+                   "   cosub update hit (TODO)",
+                   "   cosub add <N> assignments",
+                   "   cosub add <N> {days/hours/minutes}",
+                   "   cosub expire      (TODO)",
+                   "   cosub show status (TODO)",
+                   "   cosub get results (HALF)",
+                   ""
+                 ]))
+  sys.exit()
+
+if not os.path.isfile("auth.json"):
+  sys.exit("Couldn't find credentials file auth.json")
+
+action = " ".join(argv).lower()
+
+auth_data = json.load(open("auth.json", "r"))
+ACCESS_ID = auth_data["access_id"]
+SECRET_KEY = auth_data["secret_key"]
+
+## get name of the settings file, append .json if necessary
+settings_filename = "settings.json"
+#settings_filename = settings_filename + ("" if re.search("\.json$","settings_filename") else ".json")
+#stem = re.sub("\.json$", "", settings_filename)
+log_filename = "log.csv"
+
+## create a log if it doesn't exist
+if not os.path.isfile(log_filename):
+  print("  Creating " + log_filename)
+  with open(log_filename, 'w') as log_file:
+    log_writer = csv.writer(log_file, delimiter=',', quotechar='"')
+    log_writer.writerow(["Time", "Action", "Data"])
+
+## read log
+log = []
+with open(log_filename, 'r') as log_file:
+  log_rows = []
+  log_reader = csv.reader(log_file, delimiter=',', quotechar='"')
+  for row in log_reader:
+    log_rows.append(row)
+
+  keys = log_rows[0]
+  for row in log_rows[1:]:
+    log.append(dict(zip(keys,row)))
+
+## compare settings to the most recent create/update entry in the log
+with open(settings_filename, "r") as f:
+  lines = f.readlines()
+  # remove comments in json
+  lines = map(lambda line: re.sub("/\*.*\*/", "", line), lines)
+  settings_file_contents = "".join(lines)
+settings_raw = json.loads(settings_file_contents)
+settings_log_text = None
+for line in log:
+  if line['Activity'] in ['Create', 'Update']:
+    settings_log_text = line['Data']
+settings_log_raw = json.loads(settings_log_text) if settings_log_text else settings_raw
+settings_in_log = settings.parse(settings_log_raw)
+settings_in_file = settings.parse(settings_raw)
+settings_modified = (action is not "show status" and settings_in_log is not settings_in_file)
+# TODO: bail if settings modified
+settings = settings_in_file
+
+## load hit metadata if it iexists
+hit_modes = dict()
+hit = None
+if os.path.isfile("hit_modes.json"):
+  hit_modes = json.load(open("hit_modes.json", "r"))
+  hit = hit_modes[mode]
+
+## connect to amazon
+mtc = connection.MTurkConnection(aws_access_key_id=ACCESS_ID,
+                                 aws_secret_access_key=SECRET_KEY,
+                                 host=HOST)
+ 
 def create_hit(settings):
   global hit
   ## make sure there isn't already a hit
@@ -211,8 +169,13 @@ def create_hit(settings):
     duration        = timedelta(seconds = settings["assignment_duration"]),
     lifetime        = timedelta(days = 7) if in_sandbox else timedelta(seconds = 30),
     qualifications  = hit_quals
-  ) 
-  create_result = mtc.create_hit(**request_settings)[0] 
+  )
+  try:
+    create_result = mtc.create_hit(**request_settings)[0]
+  except MTurkRequestError as e:
+    print("Error\n")
+    pp(e.__dict__)
+    sys.exit(1)
 
   hit = {
     "id": create_result.HITId,
@@ -298,7 +261,6 @@ def get_results(host, mode, hit_id):
     print("Wrote   " + aId)
   print("Done")
 
-
 def add_time(hit, n):
   res = mtc.extend_hit(hit_id = hit["id"],
                        expiration_increment = n)
@@ -314,9 +276,13 @@ def go():
   if action == "create hit":
     create_hit(settings)
 
+  if action == "update hit":
+    sys.exit("TODO")
+
   if action == "get results":
     get_results(HOST, mode, hit["id"])
 
+  ## add time, assignments, or both
   if re.match("^add ", action):
     action_ = re.sub("add ","", action)
     num_assignments = 0
@@ -331,12 +297,19 @@ def go():
       add_assignments(hit, num_assignments)
       print "-> Done"
 
-    # time parse the rests
+    # time parse the rest
     seconds = timeparse(action_)
 
-    print("Adding %s" % humane_timedelta(timedelta(seconds = seconds))) 
-    add_time(hit, seconds)
-    print "-> Done" 
+    if (seconds is not None):
+      print("Adding %s" % humane_timedelta(timedelta(seconds = seconds))) 
+      add_time(hit, seconds)
+      print "-> Done" 
     
+  if action == "show status":
+    sys.exit("TODO")
+
+  if action == "expire":
+    sys.exit("TODO")
+
 if __name__ == "__main__":
     go()
