@@ -180,10 +180,10 @@ def create_hit(settings):
   print(HOST_requester + "/mturk/manageHIT?HITId=" + hit["id"])
 
   # # todo: boto isn't returning HITGroupId atm. how does CLT do it?
-  # print("")
-  # print("Link to view HIT: ")
-  # print(HOST_worker + "/mturk/preview?groupId=" + GROUPIDFIXME)
-  # print("")
+  print("")
+  print("Link to view HIT: ")
+  print(HOST_worker + "/mturk/preview?groupId=" + hit["type_id"])
+  print("")
 
   logger.write({'Action': 'Create', 'Data': settings_raw })
 
