@@ -70,7 +70,7 @@ if len(argv) == 0:
                    "   cosub update hit (TODO)",
                    "   cosub add <N> assignments",
                    "   cosub add <N> {days/hours/minutes}",
-                   "   cosub expire      (TODO)",
+                   "   cosub expire hit",
                    "   cosub show status (TODO)",
                    "   cosub get results (HALF)",
                    ""
@@ -248,7 +248,12 @@ def add_time(hit, n):
 def add_assignments(hit, n):
   res = mtc.extend_hit(hit_id = hit["id"], assignments_increment = n)
   logger.write({'Action': 'Add', 'Data': '%s assignments' % n})
-  
+ 
+def expire_hit(hit):
+  res = mtc.expire_hit(hit_id = hit["id"])
+  logger.write({'Action': 'Expire', 'Data': ''})
+  print("Done")
+
 def go(): 
   if not (action in ["status", "create hit"]) and hit["id"] is None:
     sys.exit("You haven't created the hit on Turk yet (mode: %s)" % mode)
@@ -288,8 +293,8 @@ def go():
   if action == "show status":
     sys.exit("TODO")
 
-  if action == "expire":
-    sys.exit("TODO")
+  if action == "expire hit":
+    expire_hit(hit)
 
 if __name__ == "__main__":
     go()
