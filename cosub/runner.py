@@ -41,6 +41,11 @@ def humane_timedelta(delta, precise=False, fromDate=None):
             text += (value > 1) and "s" or ""
 
     # replacing last occurrence of a comma by an 'and'
+    if text.find(",") > 0:
+        text = " and ".join(text.rsplit(", ",1))
+
+    return text
+
 def prints(*args):
   print "\n".join(args)
 
@@ -50,15 +55,19 @@ def without(array, element):
     new_array.remove(element)
   return new_array
 
-    if text.find(",") > 0:
-        text = " and ".join(text.rsplit(", ",1))
-
-    return text
-
 ## mode settings (sandbox vs production)
-HOST = 'mechanicalturk.sandbox.amazonaws.com'
-in_sandbox = "sandbox" in HOST
-mode = "sandbox" if in_sandbox else "production"
+if "-p" in sys.argv:
+  mode = "production"
+  in_sandbox = False
+else:
+  mode = "sandbox"
+  in_sandbox = True
+
+HOST = {
+  'sandbox': 'mechanicalturk.sandbox.amazonaws.com',
+  'production': 'mechanicalturk.amazonaws.com'
+}[mode]
+
 HOST_requester = "https://" + ("requestersandbox" if in_sandbox else "requester") + ".mturk.com"
 HOST_worker = "https://" + ("workersandbox" if in_sandbox else "www") + ".mturk.com"
 
@@ -83,7 +92,7 @@ if len(argv) == 0:
 if not os.path.isfile("auth.json"):
   sys.exit("Couldn't find credentials file auth.json")
 
-action = " ".join(argv).lower()
+action = " ".join(without(argv, "-p")).lower()
 
 # read authentication data
 auth_data = json.load(open("auth.json", "r"))
@@ -127,7 +136,7 @@ def create_hit(settings):
   global hit
   ## make sure there isn't already a hit
   if (hit is not None):
-    sys.exit("It looks like you already created the hit (mode: %s)" % mode)
+    sys.exit("Error: it looks like you already created the hit in %s mode (HIT ID stored in hit_modes.json)" % mode)
   
   hit_quals = Qualifications() 
   settings_quals = settings["qualifications"] 
@@ -153,6 +162,11 @@ def create_hit(settings):
     lifetime        = timedelta(days = 7) if in_sandbox else timedelta(seconds = 30),
     qualifications  = hit_quals
   )
+
+  if "http:" in settings["url"]:
+    sys.exit("Error: inside settings.json, your url is set to use 'http:'. It needs to use 'https:'")
+    ## todo: some static analysis
+
   try:
     create_result = mtc.create_hit(**request_settings)[0]
   except MTurkRequestError as e:
@@ -191,6 +205,9 @@ def create_hit(settings):
     "")
 
   logger.write({'Action': 'Create', 'Data': settings_raw })
+
+def update_hit(settings):
+  sys.exit("not yet implemented")
 
 def get_results(host, mode, hit_id):
   results_dir = "%s-results" % mode

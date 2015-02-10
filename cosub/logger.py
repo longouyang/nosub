@@ -17,7 +17,7 @@ def setup():
 	global logfile
 	## create file if it doesn't exist
 	if not os.path.isfile(name):
-	 	print("  Creating " + name)
+	 	print("Creating " + name)
 	 	logfile = open(name, 'w')
 	 	writer = csv.writer(logfile, delimiter=',', quotechar='"')
 	 	writer.writerow(fields)
