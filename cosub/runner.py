@@ -1,22 +1,17 @@
 #!/usr/bin/env python
 
+import sys, argparse, os.path, pdb, csv, json, math, re
+from pprint import pprint as pp
+
+from datetime import datetime, timedelta
+from pytimeparse.timeparse import timeparse
+
+import logger, settings
 import boto.mturk.connection as connection
 import boto.mturk.question as question
-from datetime import datetime, timedelta
-import pickle
-import sys
-import csv
-import json
-import math
-import re
-import os.path
-import pdb
-import logger
-from pprint import pprint as pp
-from pytimeparse.timeparse import timeparse
+
 from boto.mturk.qualification import LocaleRequirement, PercentAssignmentsApprovedRequirement, Qualifications
 from boto.mturk.connection import MTurkRequestError
-import settings
 
 def humane_timedelta(delta, precise=False, fromDate=None):
     # the timedelta structure does not have all units; bigger units are converted
