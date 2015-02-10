@@ -11,6 +11,7 @@ import math
 import re
 import os.path
 import pdb
+import logger
 from pprint import pprint as pp
 from pytimeparse.timeparse import timeparse
 from boto.mturk.qualification import LocaleRequirement, PercentAssignmentsApprovedRequirement, Qualifications
@@ -81,54 +82,33 @@ if not os.path.isfile("auth.json"):
 
 action = " ".join(argv).lower()
 
+# read authentication data
 auth_data = json.load(open("auth.json", "r"))
 ACCESS_ID = auth_data["access_id"]
 SECRET_KEY = auth_data["secret_key"]
 
-## get name of the settings file, append .json if necessary
 settings_filename = "settings.json"
-#settings_filename = settings_filename + ("" if re.search("\.json$","settings_filename") else ".json")
-#stem = re.sub("\.json$", "", settings_filename)
-log_filename = "log.csv"
 
-## create a log if it doesn't exist
-if not os.path.isfile(log_filename):
-  print("  Creating " + log_filename)
-  with open(log_filename, 'w') as log_file:
-    log_writer = csv.writer(log_file, delimiter=',', quotechar='"')
-    log_writer.writerow(["Time", "Action", "Data"])
+logger.setup()
 
-## read log
-log = []
-with open(log_filename, 'r') as log_file:
-  log_rows = []
-  log_reader = csv.reader(log_file, delimiter=',', quotechar='"')
-  for row in log_reader:
-    log_rows.append(row)
-
-  keys = log_rows[0]
-  for row in log_rows[1:]:
-    log.append(dict(zip(keys,row)))
-
-## compare settings to the most recent create/update entry in the log
 with open(settings_filename, "r") as f:
   lines = f.readlines()
   # remove comments in json
   lines = map(lambda line: re.sub("/\*.*\*/", "", line), lines)
   settings_file_contents = "".join(lines)
 settings_raw = json.loads(settings_file_contents)
-settings_log_text = None
-for line in log:
-  if line['Activity'] in ['Create', 'Update']:
-    settings_log_text = line['Data']
-settings_log_raw = json.loads(settings_log_text) if settings_log_text else settings_raw
-settings_in_log = settings.parse(settings_log_raw)
+#settings_log_text = None
+# for line in log:
+#   if line['Activity'] in ['Create', 'Update']:
+#     settings_log_text = line['Data']
+# settings_log_raw = json.loads(settings_log_text) if settings_log_text else settings_raw
+# settings_in_log = settings.parse(settings_log_raw)
 settings_in_file = settings.parse(settings_raw)
-settings_modified = (action is not "show status" and settings_in_log is not settings_in_file)
+# settings_modified = (action is not "show status" and settings_in_log is not settings_in_file)
 # TODO: bail if settings modified
 settings = settings_in_file
 
-## load hit metadata if it iexists
+## load hit metadata if it exists
 hit_modes = dict()
 hit = None
 if os.path.isfile("hit_modes.json"):
@@ -205,7 +185,7 @@ def create_hit(settings):
   # print(HOST_worker + "/mturk/preview?groupId=" + GROUPIDFIXME)
   # print("")
 
-  ## TODO: write data to log
+  logger.write({'Action': 'Create', 'Data': settings_raw })
 
 def get_results(host, mode, hit_id):
   results_dir = "%s results" % mode
@@ -262,12 +242,12 @@ def get_results(host, mode, hit_id):
   print("Done")
 
 def add_time(hit, n):
-  res = mtc.extend_hit(hit_id = hit["id"],
-                       expiration_increment = n)
+  res = mtc.extend_hit(hit_id = hit["id"], expiration_increment = n)
+  logger.write({'Action': 'Add', 'Data': '%s' % humane_timedelta(timedela(seconds = seconds))})
 
 def add_assignments(hit, n):
-  res = mtc.extend_hit(hit_id = hit["id"],
-                       assignments_increment = n)
+  res = mtc.extend_hit(hit_id = hit["id"], assignments_increment = n)
+  logger.write({'Action': 'Add', 'Data': '%s assignments' % n})
   
 def go(): 
   if not (action in ["status", "create hit"]) and hit["id"] is None:
