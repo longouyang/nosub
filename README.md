@@ -72,7 +72,12 @@ Now, you can perform these actions:
     cosub update hit
     cosub add <N> assignments
     cosub add <N> {days/hours/minutes}
+    cosub expire hit
     cosub get results
+
+You can also combine adding assignments and time:
+
+    cosub add 40 assignments and 3 hours
 
 ## Etymology
 
