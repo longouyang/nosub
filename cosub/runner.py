@@ -295,7 +295,7 @@ def go():
       action_ = re.sub(assignments_search.group(0), "", action_)
       action_ = re.sub("and", "", action_)
       add_assignments(hit, num_assignments)
-      print "-> Done"
+      print("-> Done")
 
     # time parse the rest
     seconds = timeparse(action_)
@@ -303,7 +303,7 @@ def go():
     if (seconds is not None):
       print("Adding %s" % humane_timedelta(timedelta(seconds = seconds))) 
       add_time(hit, seconds)
-      print "-> Done" 
+      print("-> Done" )
     
   if action == "show status":
     sys.exit("TODO")
