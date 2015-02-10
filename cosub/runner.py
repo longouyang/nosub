@@ -46,6 +46,15 @@ def humane_timedelta(delta, precise=False, fromDate=None):
             text += (value > 1) and "s" or ""
 
     # replacing last occurrence of a comma by an 'and'
+def prints(*args):
+  print "\n".join(args)
+
+def without(array, element):
+  new_array = array[:]
+  if element in array:
+    new_array.remove(element)
+  return new_array
+
     if text.find(",") > 0:
         text = " and ".join(text.rsplit(", ",1))
 
@@ -63,18 +72,17 @@ argv = sys.argv[1:]
 ## if no args, bail
 ## TODO: add --comment flag
 if len(argv) == 0:
-  print("\n".join(["",
-                   "Usage: ",
-                   "",
-                   "   cosub create hit",
-                   "   cosub update hit (TODO)",
-                   "   cosub add <N> assignments",
-                   "   cosub add <N> {days/hours/minutes}",
-                   "   cosub expire hit",
-                   "   cosub show status (TODO)",
-                   "   cosub get results (HALF)",
-                   ""
-                 ]))
+  prints(
+    "Usage: ",
+    "",
+    "   cosub create hit                    (creates a HIT using the parameters stored in settings.json)",
+    "   cosub update hit (TODO)             (updates the HIT using the parameters stored in settings.json)",
+    "   cosub add <N> assignments",
+    "   cosub add <N> {days/hours/minutes}",
+    "   cosub expire hit",
+    "   cosub show status (TODO)",
+    "   cosub get results                   (downloads results to production-results/ or sandbox-results/)",
+    "")
   sys.exit()
 
 if not os.path.isfile("auth.json"):
@@ -171,24 +179,26 @@ def create_hit(settings):
     json.dump(hit_modes, new_settings_file, indent=4, separators=(',', ': '))
     print("Wrote HIT ID and HIT Type ID to hit_modes.json")
 
-  print("\n".join(["Because you are in %s mode:" % mode, 
-                   "- the number of initial assignments is set to %s" % request_settings["max_assignments"],
-                   "- the initial HIT lifetime is set to %s" % humane_timedelta(request_settings["lifetime"])]))
+  prints(
+    "Because you are in %s mode:" % mode, 
+    "- the number of initial assignments is set to %s" % request_settings["max_assignments"],
+    "- the initial HIT lifetime is set to %s" % humane_timedelta(request_settings["lifetime"]))
     
-  print("")
-  print("Link to manage HIT: ")
-  print(HOST_requester + "/mturk/manageHIT?HITId=" + hit["id"])
+  prints(
+    "",
+    "Link to manage HIT: ",
+    HOST_requester + "/mturk/manageHIT?HITId=" + hit["id"])
 
-  # # todo: boto isn't returning HITGroupId atm. how does CLT do it?
-  print("")
-  print("Link to view HIT: ")
-  print(HOST_worker + "/mturk/preview?groupId=" + hit["type_id"])
-  print("")
+  prints(
+    "",
+    "Link to view HIT: ",
+    HOST_worker + "/mturk/preview?groupId=" + hit["type_id"],
+    "")
 
   logger.write({'Action': 'Create', 'Data': settings_raw })
 
 def get_results(host, mode, hit_id):
-  results_dir = "%s results" % mode
+  results_dir = "%s-results" % mode
 
   if not os.path.exists(results_dir):
     os.makedirs(results_dir)
