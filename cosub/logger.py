@@ -4,7 +4,7 @@ import os
 import csv
 from datetime import datetime
 
-name = "log.csv"
+name = "history.csv"
 fields = ["Time","Action","Data"]
 
 logfile = None
@@ -17,7 +17,6 @@ def setup():
 	global logfile
 	## create file if it doesn't exist
 	if not os.path.isfile(name):
-	 	print("Creating " + name)
 	 	logfile = open(name, 'w')
 	 	writer = csv.writer(logfile, delimiter=',', quotechar='"')
 	 	writer.writerow(fields)
