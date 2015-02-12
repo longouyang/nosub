@@ -125,6 +125,8 @@ hit_modes = dict()
 hit = None
 if os.path.isfile("hit_modes.json"):
   hit_modes = json.load(open("hit_modes.json", "r"))
+  if mode not in hit_modes:
+    sys.exit("Error: You haven't created the HIT in %s mode" % mode)
   hit = hit_modes[mode]
 
 ## connect to amazon
