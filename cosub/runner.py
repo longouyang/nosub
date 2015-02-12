@@ -226,12 +226,12 @@ def create_hit(settings):
     
   prints(
     "",
-    "Link to manage HIT: ",
+    "Manage HIT: ",
     HOST_requester + "/mturk/manageHIT?HITId=" + hit["id"])
 
   prints(
     "",
-    "Link to view HIT: ",
+    "View HIT: ",
     HOST_worker + "/mturk/preview?groupId=" + hit["type_id"],
     "")
 
@@ -319,16 +319,16 @@ def show_status(hit):
 
   prints(
     "Settings",
-    "=====================")
-  print(dict_str(settings_raw))
-  prints("")
+    "=====================",
+    dict_str(settings_raw),
+    "")
 
   prints(
     "Links",
     "=====================",
     dict_str({
-      "Manage": "%(host)s/mturk/manageHIT?HITId=%(id)s" % {"host": HOST_requester, "id": hit["id"]},
-      "View": "%(host)s/mturk/preview?groupId=%(id)s" % {"host": HOST_worker, "id": hit["type_id"]}
+      "Manage": "\n%(host)s/mturk/manageHIT?HITId=%(id)s\n" % {"host": HOST_requester, "id": hit["id"]},
+      "View": "\n%(host)s/mturk/preview?groupId=%(id)s" % {"host": HOST_worker, "id": hit["type_id"]}
     }),
     "")
 
