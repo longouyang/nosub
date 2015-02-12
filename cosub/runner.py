@@ -223,12 +223,22 @@ def create_hit(settings):
     "",
     "How many assignments do you want to start with?",
     "(you can always add more later using cosub add)")
-  max_assignments = int(raw_input("> "))
+
+  max_assignments = None
+
+  while max_assignments is None:
+    try:
+      max_assignments = int(raw_input("> "))
+    except ValueError:
+      prints("Couldn't understand answer. Try entering an integer (e.g., 20)")
+
+  ## TODO: implement bounds checking for assignments 
 
   prints(
     "",
     "How long do you want to collect data for?",
-    "(you can always add more time using cosub add)")
+    "You can give an answer in seconds, minutes, hours, days, or weeks.",
+    "(and you can always add more time using cosub add)")
 
   lifetime_seconds = None
 
@@ -236,7 +246,13 @@ def create_hit(settings):
     lifetime = raw_input("> ")
     lifetime_seconds = timeparse(lifetime)
     if not lifetime_seconds:
-      prints("Error parsing time (did you make a typo?)")
+      prints("Couldn't understand answer; try an answer in one of these formats:",
+        "  2 weeks",
+        "  3 days",
+        "  12 hours",
+        "  30 minutes")
+
+  ## TODO: implement bounds checking for time (30 seconds - 1 year)
 
   prints("","Creating HIT...","")
 
