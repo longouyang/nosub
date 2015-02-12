@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import sys, argparse, os.path, pdb, csv, json, math, re, time
+import sys, argparse, readline, os.path, pdb, csv, json, math, re, time
 from pprint import pprint as pp
 
 from datetime import datetime, timedelta
@@ -12,6 +12,8 @@ import boto.mturk.question as question
 
 from boto.mturk.qualification import LocaleRequirement, PercentAssignmentsApprovedRequirement, Qualifications
 from boto.mturk.connection import MTurkRequestError
+
+readline.parse_and_bind('set editing-mode emacs')
 
 def humane_timedelta(delta, precise=False, fromDate=None):
     # the timedelta structure does not have all units; bigger units are converted
@@ -180,23 +182,57 @@ def create_hit(settings):
       hit_quals.add(PercentAssignmentsApprovedRequirement("GreaterThanOrEqualTo",
                                                           settings_quals["approval_percentage"]))
 
-  ## NB: max_assignments and lifetime are different for sandbox versus production
+  prints(
+    "Your settings are:",
+    "",
+    dict_str(settings_raw)
+    )
+
+  if "http:" in settings["url"]:
+    sys.exit("Error: inside settings.json, your url is set to use 'http:'. It needs to use 'https:'")
+    ## todo: some static analysis
+
+  prints(
+    "",
+    "Are these settings okay? (yes/no)")
+  confirm_settings = raw_input("> ")
+
+  if "n" in confirm_settings:
+    sys.exit()
+
+  prints(
+    "",
+    "How many assignments do you want to start with?",
+    "(you can always add more later using cosub add)")
+  max_assignments = int(raw_input("> "))
+
+  prints(
+    "",
+    "How long do you want to collect data for?",
+    "(you can always add more time using cosub add)")
+
+  lifetime_seconds = None
+
+  while lifetime_seconds is None:
+    lifetime = raw_input("> ")
+    lifetime_seconds = timeparse(lifetime)
+    if not lifetime_seconds:
+      prints("Error parsing time (did you make a typo?)")
+
+  prints("","Creating HIT...","")
+
   request_settings = dict(
     title           = settings["title"],
     description     = settings["description"],
     keywords        = settings["keywords"],
     question        = question.ExternalQuestion(settings["url"], settings["frame_height"]),
-    max_assignments = 20 if in_sandbox else 1,
+    max_assignments = max_assignments,
     reward          = settings["reward"],
     approval_delay  = timedelta(seconds = settings["auto_approval_delay"]),
     duration        = timedelta(seconds = settings["assignment_duration"]),
-    lifetime        = timedelta(days = 7) if in_sandbox else timedelta(seconds = 30),
+    lifetime        = timedelta(seconds = lifetime_seconds),
     qualifications  = hit_quals
   )
-
-  if "http:" in settings["url"]:
-    sys.exit("Error: inside settings.json, your url is set to use 'http:'. It needs to use 'https:'")
-    ## todo: some static analysis
 
   try:
     create_result = mtc.create_hit(**request_settings)[0]
