@@ -265,7 +265,7 @@ def get_results(host, mode, hit_id):
 
 def add_time(hit, n):
   res = mtc.extend_hit(hit_id = hit["id"], expiration_increment = n)
-  logger.write({'Action': 'Add', 'Data': '%s' % humane_timedelta(timedela(seconds = seconds))})
+  logger.write({'Action': 'Add', 'Data': '%s' % humane_timedelta(timedelta(seconds = n))})
 
 def add_assignments(hit, n):
   res = mtc.extend_hit(hit_id = hit["id"], assignments_increment = n)
