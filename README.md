@@ -69,14 +69,14 @@ and add your HIT settings to `settings.json`, e.g.,
 Now, you can perform these actions:
 
 ```sh
-    cosub create   # create hit based on settings in settings.json
-    cosub update   # update hit based on settings in settings.json
-    cosub add <N> assignments
-    cosub add <N> {days/hours/minutes}
-    cosub expire   # expire hit
-    cosub download # download results to sandbox-results/ or production-results/
-    cosub status   # summarize HIT (settings, time left, # assignments, ...)
-    cosub history  # show history of cosub actions
+cosub create   # create hit based on settings in settings.json
+cosub update   # update hit based on settings in settings.json
+cosub add <N> assignments
+cosub add <N> {days/hours/minutes}
+cosub expire   # expire hit
+cosub download # download results to sandbox-results/ or production-results/
+cosub status   # summarize HIT (settings, time left, # assignments, ...)
+cosub history  # show history of cosub actions
 ```
 By default, actions take place on the sandbox. You can run actions in production mode by adding `'-p'` after `cosub`, e.g., `cosub -p create` creates the HIT on the production site rather than the sandbox.
 
