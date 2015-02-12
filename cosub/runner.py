@@ -348,10 +348,8 @@ def show_status(hit):
 
   sys.exit()
 
-
-
 def go(): 
-  if not (action in ["status", "create"]) and hit["id"] is None:
+  if not ("status" in action or "create" in action) and hit["id"] is None:
     sys.exit("You haven't created the hit on Turk yet (mode: %s)" % mode)
   
   if action == "create":
@@ -387,6 +385,10 @@ def go():
   elif action == "expire":
     expire_hit(hit)
   elif action == "history":
+    sys.exit("Not yet implemented")
+  elif action == "manage":
+    sys.exit("Not yet implemented")
+  elif action == "view":
     sys.exit("Not yet implemented")
   else:
     usage()
