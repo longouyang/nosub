@@ -50,6 +50,9 @@ def dict_str(d, level = 0):
   length_max = max(map(len, d.keys()))
 
   lines = []
+  pad = 0
+
+  any_dicts = any(map(lambda x: isinstance(x, dict),d.values()))
 
   for key in d:
     length = len(key)
@@ -60,9 +63,10 @@ def dict_str(d, level = 0):
     lines.append("%(indent)s%(key)s:%(pad)s %(value)s" %
       {'indent': (level * "-> "),
       'key': key,
-      'pad': "" if is_dict else (length_max - length) * " ",
+      'pad': (length_max - length)* ' ' + ('   ' if any_dicts else ''),
       'value': "\n" + dict_str(value, level + 1) if is_dict else str(value)
       })
+
   return "\n".join(lines)
 
 def prints(*args):
