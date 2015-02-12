@@ -68,12 +68,12 @@ and add your HIT settings to `settings.json`, e.g.,
 
 Now, you can perform these actions:
 
-    cosub create hit
-    cosub update hit
+    cosub create
+    cosub update
     cosub add <N> assignments
     cosub add <N> {days/hours/minutes}
-    cosub expire hit
-    cosub get results
+    cosub expire
+    cosub download
 
 You can also combine adding assignments and time:
 

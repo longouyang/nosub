@@ -100,13 +100,13 @@ def usage():
     "   -p: production mode (if this isn't set, cosub will run in the sandbox)",
     "",
     "Actions:",
-    "   create hit                    (create a HIT using the parameters stored in settings.json)",
-    "   update hit (TODO)             (update the HIT using the parameters stored in settings.json)",
+    "   create               (create a HIT using the parameters stored in settings.json)",
+    "   update (TODO)        (update the HIT using the parameters stored in settings.json)",
     "   add <N> assignments",
-    "   add <N> {days/hours/minutes}",
-    "   expire hit",
-    "   show status (TODO)",
-    "   get results                   (download results to production-results/ or sandbox-results/)",
+    "   add <N> <time>       (time can be hours, minutes, or seconds)",
+    "   expire",
+    "   status",
+    "   download             (download results to production-results/ or sandbox-results/)",
     "")
   sys.exit()
 
@@ -352,14 +352,14 @@ def show_status(hit):
 
 
 def go(): 
-  if not (action in ["status", "create hit"]) and hit["id"] is None:
+  if not (action in ["status", "create"]) and hit["id"] is None:
     sys.exit("You haven't created the hit on Turk yet (mode: %s)" % mode)
   
-  if action == "create hit":
+  if action == "create":
     create_hit(settings)
-  elif action == "update hit":
-    sys.exit("TODO")
-  elif action == "get results":
+  elif action == "update":
+    sys.exit("Not yet implemented")
+  elif action == "download":
     get_results(HOST, mode, hit["id"])
   ## add time, assignments, or both
   elif re.match("^add ", action):
@@ -383,10 +383,12 @@ def go():
       print("Adding %s" % humane_timedelta(timedelta(seconds = seconds))) 
       add_time(hit, seconds)
       print("-> Done" )
-  elif action == "show status":
+  elif action == "status":
     show_status(hit)
-  elif action == "expire hit":
+  elif action == "expire":
     expire_hit(hit)
+  elif action == "history":
+    sys.exit("Not yet implemented")
   else:
     usage()
 
