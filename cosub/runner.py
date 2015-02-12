@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import sys, argparse, readline, os.path, pdb, csv, json, math, re, time
+import sys, argparse, readline, os.path, pdb, csv, json, math, string, re, time
 from pprint import pprint as pp
 
 from datetime import datetime, timedelta
@@ -14,6 +14,25 @@ from boto.mturk.qualification import LocaleRequirement, PercentAssignmentsApprov
 from boto.mturk.connection import MTurkRequestError
 
 readline.parse_and_bind('set editing-mode emacs')
+
+# HT http://stackoverflow.com/a/17303428/351392
+class color:
+   PURPLE = '\033[95m'
+   CYAN = '\033[96m'
+   DARKCYAN = '\033[36m'
+   BLUE = '\033[94m'
+   GREEN = '\033[92m'
+   YELLOW = '\033[93m'
+   RED = '\033[91m'
+   BOLD = '\033[1m'
+   UNDERLINE = '\033[4m'
+   END = '\033[0m'
+
+def bold(s):
+  return color.BOLD + s + color.END
+
+def underline(s):
+  return color.UNDERLINE + s + color.END
 
 def humane_timedelta(delta, precise=False, fromDate=None):
     # the timedelta structure does not have all units; bigger units are converted
@@ -388,9 +407,11 @@ def show_status(hit):
 
   sys.exit()
 
-def go(): 
-  if not ("status" in action or "create" in action) and hit["id"] is None:
+def go():
+  if not ("create" in action) and hit is None:
     sys.exit("You haven't created the hit on Turk yet (mode: %s)" % mode)
+
+  print(bold(underline("%s mode" % string.capwords(mode))))
   
   if action == "create":
     create_hit(settings)
