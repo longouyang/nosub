@@ -66,7 +66,7 @@ def dict_str(d, level = 0):
   return "\n".join(lines)
 
 def prints(*args):
-  print "\n".join(args)
+  print("\n".join(args))
 
 def without(array, element):
   new_array = array[:]
