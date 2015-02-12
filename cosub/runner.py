@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import sys, argparse, os.path, pdb, csv, json, math, re
+import sys, argparse, os.path, pdb, csv, json, math, re, time
 from pprint import pprint as pp
 
 from datetime import datetime, timedelta
@@ -46,6 +46,25 @@ def humane_timedelta(delta, precise=False, fromDate=None):
 
     return text
 
+def dict_str(d, level = 0):
+  length_max = max(map(len, d.keys()))
+
+  lines = []
+
+  for key in d:
+    length = len(key)
+    value = d[key]
+
+    is_dict = isinstance(value, dict)
+    
+    lines.append("%(indent)s%(key)s:%(pad)s %(value)s" %
+      {'indent': (level * "-> "),
+      'key': key,
+      'pad': "" if is_dict else (length_max - length) * " ",
+      'value': "\n" + dict_str(value, level + 1) if is_dict else str(value)
+      })
+  return "\n".join(lines)
+
 def prints(*args):
   print "\n".join(args)
 
@@ -73,21 +92,28 @@ HOST_worker = "https://" + ("workersandbox" if in_sandbox else "www") + ".mturk.
 
 argv = sys.argv[1:]
 
+def usage():
+  prints(
+    "Usage: cosub [-p] ACTION",
+    "",
+    "Flags:",
+    "   -p: production mode (if this isn't set, cosub will run in the sandbox)",
+    "",
+    "Actions:",
+    "   create hit                    (create a HIT using the parameters stored in settings.json)",
+    "   update hit (TODO)             (update the HIT using the parameters stored in settings.json)",
+    "   add <N> assignments",
+    "   add <N> {days/hours/minutes}",
+    "   expire hit",
+    "   show status (TODO)",
+    "   get results                   (download results to production-results/ or sandbox-results/)",
+    "")
+  sys.exit()
+
 ## if no args, bail
 ## TODO: add --comment flag
 if len(argv) == 0:
-  prints(
-    "Usage: ",
-    "",
-    "   cosub create hit                    (creates a HIT using the parameters stored in settings.json)",
-    "   cosub update hit (TODO)             (updates the HIT using the parameters stored in settings.json)",
-    "   cosub add <N> assignments",
-    "   cosub add <N> {days/hours/minutes}",
-    "   cosub expire hit",
-    "   cosub show status (TODO)",
-    "   cosub get results                   (downloads results to production-results/ or sandbox-results/)",
-    "")
-  sys.exit()
+  usage()
 
 if not os.path.isfile("auth.json"):
   sys.exit("Couldn't find credentials file auth.json")
@@ -278,21 +304,65 @@ def expire_hit(hit):
   logger.write({'Action': 'Expire', 'Data': ''})
   print("Done")
 
+def show_status(hit):
+  prints("",
+    "Basic",
+    "=====================",
+    dict_str({
+      "Mode": mode,
+      "HIT ID": hit["id"],
+      "HIT Type ID": hit["type_id"]}),
+    "")
+
+  prints(
+    "Settings",
+    "=====================")
+  print(dict_str(settings_raw))
+  prints("")
+
+  prints(
+    "Links",
+    "=====================",
+    dict_str({
+      "Manage": "%(host)s/mturk/manageHIT?HITId=%(id)s" % {"host": HOST_requester, "id": hit["id"]},
+      "View": "%(host)s/mturk/preview?groupId=%(id)s" % {"host": HOST_worker, "id": hit["type_id"]}
+    }),
+    "")
+
+  hit_remote = mtc.get_hit(hit["id"], response_groups = ["Request","Minimal","HITDetail","HITQuestion","HITAssignmentSummary"])[0]
+  
+  expiration = datetime.strptime(hit_remote.Expiration, '%Y-%m-%dT%H:%M:%SZ')
+  now = datetime.utcnow()
+
+  time_left = expiration - now
+
+  prints(
+    "Collection",
+    "=====================",
+    dict_str({
+    "Time remaining": humane_timedelta(time_left) if time_left.total_seconds() > 0 else "Expired",
+    "Assignments": {
+      "Remaining": hit_remote.NumberOfAssignmentsAvailable,
+      "Completed": hit_remote.NumberOfAssignmentsCompleted,
+      "Pending": hit_remote.NumberOfAssignmentsPending
+    }}))
+
+  sys.exit()
+
+
+
 def go(): 
   if not (action in ["status", "create hit"]) and hit["id"] is None:
     sys.exit("You haven't created the hit on Turk yet (mode: %s)" % mode)
   
   if action == "create hit":
     create_hit(settings)
-
-  if action == "update hit":
+  elif action == "update hit":
     sys.exit("TODO")
-
-  if action == "get results":
+  elif action == "get results":
     get_results(HOST, mode, hit["id"])
-
   ## add time, assignments, or both
-  if re.match("^add ", action):
+  elif re.match("^add ", action):
     action_ = re.sub("add ","", action)
     num_assignments = 0
     td = None
@@ -313,12 +383,12 @@ def go():
       print("Adding %s" % humane_timedelta(timedelta(seconds = seconds))) 
       add_time(hit, seconds)
       print("-> Done" )
-    
-  if action == "show status":
-    sys.exit("TODO")
-
-  if action == "expire hit":
+  elif action == "show status":
+    show_status(hit)
+  elif action == "expire hit":
     expire_hit(hit)
+  else:
+    usage()
 
 if __name__ == "__main__":
     go()
