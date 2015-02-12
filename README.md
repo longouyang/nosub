@@ -75,7 +75,8 @@ Now, you can perform these actions:
     cosub add <N> {days/hours/minutes}
     cosub expire   # expire hit
     cosub download # download results to sandbox-results
-    cosub history  # show
+    cosub status   # summarize HIT (settings, time left, # assignments, ...)
+    cosub history  # show history of cosub actions
 ```
 By default, actions take place on the sandbox. You can specify them to take place on the production server by adding `'-p'` after `cosub`, e.g., `cosub -p create` creates the HIT on the production site rather than the sandbox.
 
