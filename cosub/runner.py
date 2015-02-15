@@ -230,7 +230,21 @@ def create_hit(settings):
     try:
       max_assignments = int(raw_input("> "))
     except ValueError:
-      prints("Couldn't understand answer. Try entering an integer (e.g., 20)")
+      prints("Couldn't understand answer. Try entering a positive integer (e.g., 20)")
+
+
+  if mode == "production":
+    reward = settings["reward"]
+    cost = max_assignments * float(reward) * 1.1
+    prints(
+      "The cost will be $%s ([%s assignments * $%s per assignment] + 10 percent fee)" % (cost, max_assignments, reward),
+      "Is this okay? (yes/no)")
+
+    confirm_cost = raw_input("> ")
+    if "n" in confirm_cost:
+      sys.exit()
+  else:
+    print("(This won't cost anything because you're in sandbox mode)")
 
   ## TODO: implement bounds checking for assignments 
 
