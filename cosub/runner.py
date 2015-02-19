@@ -369,8 +369,20 @@ def get_results(host, mode, hit_id):
     
     ## otherwise, write to disk
     data = a.__dict__
-    data["answer"] = json.loads( a.answers[0][0].fields[0] )
-    data.pop("answers",None)
+
+    answers_dict = dict()
+
+    for answer in a.answers:
+      for question_form_answer in answer:
+        print(question_form_answer.__dict__)
+        field_name = question_form_answer.qid
+        field_value = question_form_answer.fields[0]
+
+        answers_dict[field_name] = json.loads( field_value )
+
+    ## overwrite the array of QuestionFormAnswer objects
+    data["answers"] = answers_dict
+    
     
     with open(results_dir + "/" + aId + ".json","w") as f:
       jsonData = json.dumps(data, indent=4, separators=(',', ': '))
