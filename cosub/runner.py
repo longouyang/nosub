@@ -190,14 +190,14 @@ def create_hit(settings):
   if (hit is not None):
     sys.exit("Error: it looks like you already created the hit in %s mode (HIT ID stored in hit_modes.json)" % mode)
   
-  hit_quals = Qualifications() 
-  settings_quals = settings["qualifications"] 
+  hit_quals = Qualifications()
+  settings_quals = settings["qualifications"]
   ## TODO: master worker, custom quals, utility for creating qualifications?
   if (settings_quals):
-    if settings_quals["location"]: 
+    if settings_quals["location"]:
       hit_quals.add(LocaleRequirement("EqualTo", settings_quals["location"]))
 
-    if settings_quals["approval_percentage"]: 
+    if settings_quals["approval_percentage"]:
       hit_quals.add(PercentAssignmentsApprovedRequirement("GreaterThanOrEqualTo",
                                                           settings_quals["approval_percentage"]))
 
@@ -305,9 +305,8 @@ def create_hit(settings):
     print("Wrote HIT ID and HIT Type ID to hit_modes.json")
 
   prints(
-    "Because you are in %s mode:" % mode, 
-    "- the number of initial assignments is set to %s" % request_settings["max_assignments"],
-    "- the initial HIT lifetime is set to %s" % humane_timedelta(request_settings["lifetime"]))
+    "- The number of initial assignments is set to %s" % request_settings["max_assignments"],
+    "- The initial HIT lifetime is set to %s" % humane_timedelta(request_settings["lifetime"]))
     
   prints(
     "",
