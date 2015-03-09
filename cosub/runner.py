@@ -322,7 +322,51 @@ def create_hit(settings):
   logger.write({'Action': 'Create', 'Data': settings_raw })
 
 def update_hit(settings):
-  sys.exit("not yet implemented")
+  global hit
+  hit_quals = Qualifications()
+  old_hit_type_id = hit["type_id"]
+  settings_quals = settings["qualifications"]
+  ## TODO: master worker, custom quals, utility for creating qualifications?
+  if (settings_quals):
+    if settings_quals["location"]:
+      hit_quals.add(LocaleRequirement("EqualTo", settings_quals["location"]))
+
+    if settings_quals["approval_percentage"]:
+      hit_quals.add(PercentAssignmentsApprovedRequirement("GreaterThanOrEqualTo",
+                                                          settings_quals["approval_percentage"]))
+
+  request_settings = dict(
+    title           = settings["title"],
+    description     = settings["description"],
+    keywords        = settings["keywords"],
+    reward          = settings["reward"],
+    approval_delay  = timedelta(seconds = settings["auto_approval_delay"]),
+    duration        = timedelta(seconds = settings["assignment_duration"]),
+    qual_req        = hit_quals
+  )
+
+  try:
+    new_hit_type_id = mtc.register_hit_type(**request_settings)[0].HITTypeId
+
+    if new_hit_type_id == old_hit_type_id:
+      prints("Settings haven't changed; not updating")
+      sys.exit(1)
+
+    change_existing_hit_type_result = mtc.change_hit_type_of_hit(hit["id"], new_hit_type_id)
+  except MTurkRequestError as e:
+    print("Error\n")
+    pp(e.__dict__)
+
+  hit_modes[mode]["type_id"] = new_hit_type_id
+
+  ## write new_hit_type_id to hit_modes.json
+  with open("hit_modes.json", 'w') as f:
+    json.dump(hit_modes, f, indent=4, separators=(',', ': '))
+
+  prints("Updated from type:",
+    old_hit_type_id,
+    "to type:",
+    new_hit_type_id)
 
 def get_results(host, mode, hit_id):
   results_dir = "%s-results" % mode
@@ -457,7 +501,7 @@ def go():
   if action == "create":
     create_hit(settings)
   elif action == "update":
-    sys.exit("Not yet implemented")
+    update_hit(settings)
   elif action == "download":
     get_results(HOST, mode, hit["id"])
   ## add time, assignments, or both
