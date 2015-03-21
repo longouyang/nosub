@@ -80,7 +80,7 @@ def dict_str(d, level = 0):
     value = d[key]
 
     is_dict = isinstance(value, dict)
-    
+
     lines.append("%(indent)s%(key)s:%(pad)s %(value)s" %
       {'indent': (level * "-> "),
       'key': key,
@@ -183,13 +183,13 @@ if os.path.isfile("hit_modes.json"):
 mtc = connection.MTurkConnection(aws_access_key_id=ACCESS_ID,
                                  aws_secret_access_key=SECRET_KEY,
                                  host=HOST)
- 
+
 def create_hit(settings):
   global hit
   ## make sure there isn't already a hit
   if (hit is not None):
     sys.exit("Error: it looks like you already created the hit in %s mode (HIT ID stored in hit_modes.json)" % mode)
-  
+
   hit_quals = Qualifications()
   settings_quals = settings["qualifications"]
   ## TODO: master worker, custom quals, utility for creating qualifications?
@@ -246,7 +246,7 @@ def create_hit(settings):
   else:
     print("(This won't cost anything because you're in sandbox mode)")
 
-  ## TODO: implement bounds checking for assignments 
+  ## TODO: implement bounds checking for assignments
 
   prints(
     "",
@@ -307,7 +307,7 @@ def create_hit(settings):
   prints(
     "- The number of initial assignments is set to %s" % request_settings["max_assignments"],
     "- The initial HIT lifetime is set to %s" % humane_timedelta(request_settings["lifetime"]))
-    
+
   prints(
     "",
     "Manage HIT: ",
@@ -397,19 +397,19 @@ def get_results(host, mode, hit_id):
     sys.exit("Done")
 
   assignments_to_write = []
-  
+
   for i in range(num_downloaded_pages, num_total_pages + 1):
     print("Downloading page " + str(i) + " of results")
     assignments_to_write += mtc.get_assignments(hit_id, page_size = int(page_size), page_number = i)
-  
+
   for a in assignments_to_write:
     aId = a.AssignmentId
-    
+
     ## if we've downloaded this one before, don't write to disk
     if aId in downloaded_assignments:
       print("Skipped " + aId)
       continue
-    
+
     ## otherwise, write to disk
     data = a.__dict__
 
@@ -425,12 +425,12 @@ def get_results(host, mode, hit_id):
 
     ## overwrite the array of QuestionFormAnswer objects
     data["answers"] = answers_dict
-    
-    
+
+
     with open(results_dir + "/" + aId + ".json","w") as f:
       jsonData = json.dumps(data, indent=4, separators=(',', ': '))
       f.write(jsonData)
-    
+
     print("Wrote   " + aId)
   print("Done")
 
@@ -441,7 +441,7 @@ def add_time(hit, n):
 def add_assignments(hit, n):
   res = mtc.extend_hit(hit_id = hit["id"], assignments_increment = n)
   logger.write({'Action': 'Add', 'Data': '%s assignments' % n})
- 
+
 def expire_hit(hit):
   res = mtc.expire_hit(hit_id = hit["id"])
   logger.write({'Action': 'Expire', 'Data': ''})
@@ -473,7 +473,7 @@ def show_status(hit):
     "")
 
   hit_remote = mtc.get_hit(hit["id"], response_groups = ["Request","Minimal","HITDetail","HITQuestion","HITAssignmentSummary"])[0]
-  
+
   expiration = datetime.strptime(hit_remote.Expiration, '%Y-%m-%dT%H:%M:%SZ')
   now = datetime.utcnow()
 
@@ -497,7 +497,7 @@ def go():
     sys.exit("You haven't created the hit on Turk yet (mode: %s)" % mode)
 
   print(bold(underline("%s mode" % string.capwords(mode))))
-  
+
   if action == "create":
     create_hit(settings)
   elif action == "update":
@@ -523,7 +523,7 @@ def go():
     seconds = timeparse(action_)
 
     if (seconds is not None):
-      print("Adding %s" % humane_timedelta(timedelta(seconds = seconds))) 
+      print("Adding %s" % humane_timedelta(timedelta(seconds = seconds)))
       add_time(hit, seconds)
       print("-> Done" )
   elif action == "status":

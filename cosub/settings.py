@@ -4,7 +4,7 @@ from pytimeparse.timeparse import timeparse
 import re
 
 def my_timeparse(_s):
-  s = re.sub("and","",_s) 
+  s = re.sub("and","",_s)
   return timeparse(s)
 
 def parse(d_raw):
@@ -12,12 +12,12 @@ def parse(d_raw):
 
   # HT http://stackoverflow.com/q/9875660/351392 for the idiom
   error_messages = []
-  
+
   # timeparse the approval delay, duration, and lifetime fields
   for k in ["auto_approval_delay", "assignment_duration"]:
     d[k] = my_timeparse(d[k])
     if d[k] is None:
-      error_messages.append("- %s must be a duration but it is set to: %s" % (k, d_raw[k])) 
+      error_messages.append("- %s must be a duration but it is set to: %s" % (k, d_raw[k]))
 
   # int parse the frame height and max assignments
   for k in ["frame_height"]:
@@ -37,5 +37,5 @@ def parse(d_raw):
   if len(error_messages) > 0:
     print("Error%s parsing %s:" % ("" if num_errors == 1 else "s", settings_filename))
     sys.exit("\n".join(error_messages))
-  
+
   return d
