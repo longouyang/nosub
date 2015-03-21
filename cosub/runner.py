@@ -417,7 +417,6 @@ def get_results(host, mode, hit_id):
 
     for answer in a.answers:
       for question_form_answer in answer:
-        print(question_form_answer.__dict__)
         field_name = question_form_answer.qid
         field_value = question_form_answer.fields[0]
 
