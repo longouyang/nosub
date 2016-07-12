@@ -2,7 +2,7 @@
 
 A command-line tool for creating external HITs on Amazon's Mechanical Turk.
 
-**Note: under rapid development; this document is incomplete**
+**Note: cosub is a work in progress; this document is incomplete**
 
 ## Philosophy
 
