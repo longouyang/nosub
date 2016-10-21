@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+print "this is actually the code I wrote!!!!"
+
 import sys, argparse, readline, os.path, pdb, csv, json, math, string, re, time
 from pprint import pprint as pp
 
@@ -107,6 +109,12 @@ else:
   mode = "sandbox"
   in_sandbox = True
 
+if "--silent" in sys.argv:
+  dialogue_mode = "silent"
+else:
+  dialogue_mode = "verbose"
+print dialogue_mode
+
 HOST = {
   'sandbox': 'mechanicalturk.sandbox.amazonaws.com',
   'production': 'mechanicalturk.amazonaws.com'
@@ -123,6 +131,7 @@ def usage():
     "",
     "Flags:",
     "   -p: production mode (if this isn't set, cosub will run in the sandbox)",
+    "   --silent: run silently with default #Ss (9) and default experiment duration (1 day)",
     "",
     "Actions:",
     "   create               (create a HIT using the parameters stored in settings.json)",
