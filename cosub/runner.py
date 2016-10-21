@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-print "this is actually the code I wrote!!!!"
-
 import sys, argparse, readline, os.path, pdb, csv, json, math, string, re, time
 from pprint import pprint as pp
 
@@ -108,7 +106,10 @@ if "-p" in sys.argv:
 else:
   mode = "sandbox"
   in_sandbox = True
+defaultNSs = 9
+defaultDuration = "1 day"
 
+## dialogue mode settings (silent vs verbose)
 if "--silent" in sys.argv:
   dialogue_mode = "silent"
 else:
@@ -131,7 +132,7 @@ def usage():
     "",
     "Flags:",
     "   -p: production mode (if this isn't set, cosub will run in the sandbox)",
-    "   --silent: run silently with default #Ss (9) and default experiment duration (1 day)",
+    "   --silent: run silently with default #Ss (" + str(defaultNSs) + ") and default experiment duration (" + defaultDuration + ")",
     "",
     "Actions:",
     "   create               (create a HIT using the parameters stored in settings.json)",
@@ -152,7 +153,11 @@ if len(argv) == 0:
 if not os.path.isfile("auth.json"):
   sys.exit("Couldn't find credentials file auth.json")
 
-action = " ".join(without(argv, "-p")).lower()
+action = " ".join(
+  without(
+    without(argv, "-p"), "--silent"
+  )
+).lower()
 
 # read authentication data
 auth_data = json.load(open("auth.json", "r"))
@@ -220,60 +225,71 @@ def create_hit(settings):
     sys.exit("Error: inside settings.json, your url is set to use 'http:'. It needs to use 'https:'")
     ## todo: some static analysis
 
-  prints(
-    "",
-    "Are these settings okay? (yes/no)")
-  confirm_settings = raw_input("> ")
+  if dialogue_mode=="verbose":
+    prints(
+      "",
+      "Are these settings okay? (yes/no)")
+    confirm_settings = raw_input("> ")
+  else:
+    confirm_settings = "yes"
 
   if "n" in confirm_settings:
     sys.exit()
 
-  prints(
-    "",
-    "How many assignments do you want to start with?",
-    "(you can always add more later using cosub add)")
+  if dialogue_mode=="verbose":
+    prints(
+      "",
+      "How many assignments do you want to start with?",
+      "(you can always add more later using cosub add)")
 
-  max_assignments = None
+    max_assignments = None
 
-  while max_assignments is None:
-    try:
-      max_assignments = int(raw_input("> "))
-    except ValueError:
-      prints("Couldn't understand answer. Try entering a positive integer (e.g., 20)")
-
+    while max_assignments is None:
+      try:
+        max_assignments = int(raw_input("> "))
+      except ValueError:
+        prints("Couldn't understand answer. Try entering a positive integer (e.g., 20)")
+  else:
+    prints("You will start with " + str(defaultNSs) + " assignments.")
+    max_assignments = defaultNSs
 
   if mode == "production":
     reward = settings["reward"]
     cost = max_assignments * float(reward) * 1.1
     prints(
-      "The cost will be $%s ([%s assignments * $%s per assignment] + 10 percent fee)" % (cost, max_assignments, reward),
-      "Is this okay? (yes/no)")
-
-    confirm_cost = raw_input("> ")
-    if "n" in confirm_cost:
-      sys.exit()
+      "The cost will be $%s ([%s assignments * $%s per assignment] + 10 percent fee)" % (cost, max_assignments, reward)
+    )
+    if dialogue_mode=="verbose":
+      prints("Is this okay? (yes/no)")
+      confirm_cost = raw_input("> ")
+      if "n" in confirm_cost:
+        sys.exit()
   else:
     print("(This won't cost anything because you're in sandbox mode)")
 
   ## TODO: implement bounds checking for assignments
 
-  prints(
-    "",
-    "How long do you want to collect data for?",
-    "You can give an answer in seconds, minutes, hours, days, or weeks.",
-    "(and you can always add more time using cosub add)")
+  if dialogue_mode=="verbose":
+    prints(
+      "",
+      "How long do you want to collect data for?",
+      "You can give an answer in seconds, minutes, hours, days, or weeks.",
+      "(and you can always add more time using cosub add)")
 
-  lifetime_seconds = None
+    lifetime_seconds = None
 
-  while lifetime_seconds is None:
-    lifetime = raw_input("> ")
-    lifetime_seconds = timeparse(lifetime)
-    if not lifetime_seconds:
-      prints("Couldn't understand answer; try an answer in one of these formats:",
-        "  2 weeks",
-        "  3 days",
-        "  12 hours",
-        "  30 minutes")
+    while lifetime_seconds is None:
+      lifetime = raw_input("> ")
+      lifetime_seconds = timeparse(lifetime)
+      if not lifetime_seconds:
+        prints("Couldn't understand answer; try an answer in one of these formats:",
+          "  2 weeks",
+          "  3 days",
+          "  12 hours",
+          "  30 minutes")
+  else:
+      prints("You will collect data for " + defaultDuration + ".")
+      lifetime_seconds = timeparse(defaultDuration)
 
   ## TODO: implement bounds checking for time (30 seconds - 1 year)
 
