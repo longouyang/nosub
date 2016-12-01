@@ -255,9 +255,11 @@ def create_hit(settings):
 
   if mode == "production":
     reward = settings["reward"]
-    cost = max_assignments * float(reward) * 1.1
+    cost = max_assignments * float(reward)
+    fee = 0.4 if max_assignments > 9 else 0.2
+    fee_str = "40%" if fee == 0.4 else "20%"
     prints(
-      "The cost will be $%s ([%s assignments * $%s per assignment] + 10 percent fee)" % (cost, max_assignments, reward)
+      "The cost will be $%.2f -- %s assignments * $%.2f/assignment + %s fee" % (cost, max_assignments, reward, fee_str)
     )
     if dialogue_mode=="verbose":
       prints("Is this okay? (yes/no)")
