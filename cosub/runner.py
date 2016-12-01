@@ -445,11 +445,14 @@ def get_results(host, mode, hit_id):
         field_name = question_form_answer.qid
         field_value = question_form_answer.fields[0]
 
-        answers_dict[field_name] = json.loads( field_value )
+        try:
+          answers_dict[field_name] = json.loads( field_value  )
+        except:
+          if (field_value == 'undefined'):
+            answers_dict[field_name] = None
 
     ## overwrite the array of QuestionFormAnswer objects
     data["answers"] = answers_dict
-
 
     with open(results_dir + "/" + aId + ".json","w") as f:
       jsonData = json.dumps(data, indent=4, separators=(',', ': '))
