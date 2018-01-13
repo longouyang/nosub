@@ -1,7 +1,1 @@
-auth.json
-env/*
-*.pyc
-log.csv
-cosub/clean
-cosub/cosub
-cosub/hit_modes.json
+node_modules
