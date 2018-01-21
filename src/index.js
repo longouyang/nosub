@@ -1,5 +1,7 @@
 var AWS = require('aws-sdk'),
-    _ = require('lodash');
+    _ = require('lodash'),
+    minimist = require('minimist'),
+    ask = require('./ask');
 
 // TODO: inquirer has issues:
 // - displays ANSI codes inside emacs shell.
@@ -39,8 +41,16 @@ function create(_options) {
 
   var promptSchema = [
     {
+      name: 'environment',
+      type: 'input',
+      message: 'Do you want to run on production or sandbox?',
+      validate: function(x) {
+        return ('production'.indexOf(x) > -1 || 'sandbox'.indexOf(x) > -1) ? true : 'Type p for production and s for sandbox'
+      },
       prefix: '',
-      suffix: '\n>',
+      suffix: '\n>'
+    },
+    {
       name: 'assignments',
       type: 'input',
       message: 'How many assignments do you want to run?',
@@ -50,28 +60,41 @@ function create(_options) {
       },
       validate: function(x) {
         return _.isInteger(x) ? true : 'Answer must be a number'
-      }
+      },
+      prefix: '',
+      suffix: '\n>'
     },
     {
-      prefix: '',
-      suffix: '\n>',
       name: 'duration',
       type: 'input',
       message: 'How many seconds do you want to run the HIT?\n You can give an answer in seconds, minutes, hours, days, or weeks.\n (You can always add more time using cosub add)',
       validate: function(x) {
-        return validateDuration(x) ? true : 'invalid'
-      }
+        return validateDuration(x) ? true : 'Invalid duration'
+      },
+      prefix: '',
+      suffix: '\n>'
     }
   ];
 
+  // don't ask user for things that they passed in via command-line args
+  // TODO: validate input from command-line args
+  promptSchema = _.reject(promptSchema,
+           function(entry) {
+             return _.has(argv, entry.name)
+           }
+          )
+
   var getAccountBalance = mturk.getAccountBalance({}).promise();
 
-  prompt(promptSchema)
-    .then(function() { return getAccountBalance })
-    .then(function(res) {
-      console.log(arguments)
-    })
+  // prompt(promptSchema)
+  //   .then(function() { return getAccountBalance })
+  //   .then(function(res) {
+  //     console.log(arguments)
+  //   })
 
+  //console.log(prompt(promptSchema))
+
+  // ask(prompts).then(function() { return getAccountBalance } )
 
   // var afterPrompt = function(err, result) {
   //   console.log(result)
@@ -86,9 +109,68 @@ function create(_options) {
 }
 
 var args = process.argv.slice(2);
-
-var action = args[0];
+var argv = require('minimist')(process.argv.slice(2));
+var action  = argv['_'];
 
 if (action == 'create') {
   create()
 }
+
+async function test() {
+  let x = await ask.askMany(
+    [{message: 'what is 5 + 1?\n> ',
+      validate: function(x) { return parseInt(x) == 6},
+      transform: function(x) { return parseInt(x) }
+     },
+     {message: 'what is 5 + 2?\n> ',
+      validate: function(x) { return parseInt(x) == 7},
+      transform: function(x) { return parseInt(x) }
+     }
+    ]
+  )
+
+  // merge value of x with createHIT
+
+  mturk.createHIT()
+}
+
+if (action == 'test') {
+  // ask.askOne(
+  //   {message: 'what is 5 + 1?\n> ',
+  //    validate: function(x) { return parseInt(x) == 6},
+  //    transform: function(x) { return parseInt(x) }
+  //   })
+  //   .then(function() {
+  //     return ask.askOne({message: 'what is 5 + 2?\n> ',
+  //             validate: function(x) { return parseInt(x) == 7},
+  //             transform: function(x) { return parseInt(x) }
+  //            })
+  //   })
+  //   .then(function(e) {
+  //     console.log('finally ' + e)
+  //   })
+
+
+  test()
+}
+
+function init() {
+  var res = ask.many(
+    [{message: 'what is 5 + 1?\n> ',
+      validate: function(x) { return parseInt(x) == 6},
+      transform: function(x) { return parseInt(x) }
+     },
+     {message: 'what is 5 + 2?\n> ',
+      validate: function(x) { return parseInt(x) == 7},
+      transform: function(x) { return parseInt(x) }
+     }
+    ]
+  )
+  console.log('res is ' + res);
+}
+
+if (action == 'init') {
+  init()
+}
+
+// TODO: cosub init function to create a stub HIT config file
