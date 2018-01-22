@@ -1,111 +1,176 @@
 var AWS = require('aws-sdk'),
     _ = require('lodash'),
     minimist = require('minimist'),
-    ask = require('./ask');
-
-// TODO: inquirer has issues:
-// - displays ANSI codes inside emacs shell.
-// - is kinda heavyweight
-// - does filtering before validation
-// - erases the prompt upon invalid input
-// i should roll my own implementation using readline and promises.
-var inquirer = require('inquirer');
+    ask = require('./ask'),
+    fs = require('fs');
 
 AWS.config.update({region:'us-east-1'});
 
-var unitsToSeconds = {second: 1, minute: 60, hour: 3600, day: 86400, week: 604800};
+// returns an mturk instance for either production or sandbox
+// HT https://github.com/aws/aws-sdk-js/issues/1390
+var getClient = function(_opts) {
+  var opts = _.defaults(_opts || {},
+                        {environment: 'sandbox'})
 
-// converts a string input to a number of seconds
-function extractDuration(x) {
-  var match = /(\d+)\s*(second|minute|hour|day|week)/.exec(x);
-  var numUnits = parseFloat(match[1]),
-      unit = match[2];
+  var endpoint = (opts.environment == 'production'
+                  ? 'https://mturk-requester.us-east-1.amazonaws.com'
+                  : 'https://mturk-requester-sandbox.us-east-1.amazonaws.com');
 
-  return numUnits * unitsToSeconds[unit];
+  console.log('endpoint is ' + endpoint);
+
+  return new AWS.MTurk(
+    {apiVersion: '2017-01-17',
+     endpoint: endpoint
+    });
 }
 
-function validateDuration(x) {
-  return /\d+\s*(second|minute|hour|day|week)s?/.test(x)
-}
-
-
-var mturk = new AWS.MTurk({apiVersion: '2017-01-17'});
-// interactive version
-function create(_options) {
+// TODO? in addition to command-line and stdin interfaces, also allow programmatic access
+function create(settings, _options) {
   var options = _.defaults(options || {},
                            {environment: 'sandbox',
                             batch: false
                            });
 
-  var prompt = inquirer.createPromptModule();
+  var unitsToSeconds = {second: 1, minute: 60, hour: 3600, day: 86400, week: 604800};
 
-  var promptSchema = [
+  // converts a string input to a number of seconds
+  function extractDuration(x) {
+    var match = /(\d+)\s*(second|minute|hour|day|week)/.exec(x);
+    var numUnits = parseFloat(match[1]),
+        unit = match[2];
+
+    return numUnits * unitsToSeconds[unit];
+  }
+
+  function validateDuration(x) {
+    return /\d+\s*(second|minute|hour|day|week)s?/.test(x)
+  }
+
+  var allQuestions = [
     {
       name: 'environment',
-      type: 'input',
       message: 'Do you want to run on production or sandbox?',
       validate: function(x) {
         return ('production'.indexOf(x) > -1 || 'sandbox'.indexOf(x) > -1) ? true : 'Type p for production and s for sandbox'
       },
-      prefix: '',
-      suffix: '\n>'
+      transform: function(x) {
+        return 'production'.indexOf(x) > -1 ? 'production' : 'sandbox'
+      }
     },
     {
       name: 'assignments',
-      type: 'input',
       message: 'How many assignments do you want to run?',
-      // NB: filter runs before validate :/
-      filter: function(x) {
-        return parseInt(x)
-      },
       validate: function(x) {
         return _.isInteger(x) ? true : 'Answer must be a number'
       },
-      prefix: '',
-      suffix: '\n>'
+      transform: function(x) {
+        return parseInt(x)
+      }
     },
     {
       name: 'duration',
-      type: 'input',
-      message: 'How many seconds do you want to run the HIT?\n You can give an answer in seconds, minutes, hours, days, or weeks.\n (You can always add more time using cosub add)',
+      message: ['How long do you want to run the HIT?',
+                'You can give an answer in seconds, minutes, hours, days, or weeks.',
+                '(You can always add more time using cosub add)'].join('\n'),
       validate: function(x) {
         return validateDuration(x) ? true : 'Invalid duration'
       },
-      prefix: '',
-      suffix: '\n>'
+      transform: function(x) {
+        return extractDuration(x)
+      }
     }
   ];
 
-  // don't ask user for things that they passed in via command-line args
-  // TODO: validate input from command-line args
-  promptSchema = _.reject(promptSchema,
-           function(entry) {
-             return _.has(argv, entry.name)
-           }
-          )
+  var questionsPartitioned = _.partition(allQuestions,
+                                         function(q) {
+                                           return _.has(argv, q.name) && q.validate(argv[q.name])
+                                         }),
+      answeredQuestions = questionsPartitioned[0],
+      unansweredQuestions = questionsPartitioned[1];
 
+  var noninteractiveAnswers = _.chain(answeredQuestions)
+      .map(function(q) { return [q.name, q.transform(argv[q.name])] })
+      .fromPairs()
+      .value();
+
+  var interactiveAnswers = _.fromPairs(ask.many(unansweredQuestions));
+
+  var answers = _.extend({},noninteractiveAnswers, interactiveAnswers);
+
+  // transform anything passed in via command line
+
+  var externalQuestion =
+`<ExternalQuestion xmlns="http://mechanicalturk.amazonaws.com/AWSMechanicalTurkDataSchemas/2006-07-14/ExternalQuestion.xsd">
+  <ExternalURL>${settings.url}</ExternalURL>
+  <FrameHeight>${settings.frame_height}</FrameHeight>
+</ExternalQuestion>`;
+
+  var turkParams = _.chain(settings)
+      .extend(answers,
+              {question: externalQuestion})
+      .omit('url', 'environment', 'frame_height')
+      .value();
+
+  // for backwards compatibility, i'll keep the old settings.json format
+  //
+
+  var renames = {'assignment_duration': 'assignment_duration_in_seconds',
+                 'qualifications': 'qualification_requirements',
+                 'duration': 'lifetime_in_seconds',
+                 'assignment_duration': 'assignment_duration_in_seconds',
+                 'auto_approval_delay': 'auto_approval_delay_in_seconds',
+                 'assignments': 'max_assignments',
+                 'qualifications': 'qualification_requirements'
+                };
+
+  function renameOldKey(_k) {
+    var key = _.has(renames, _k) ? renames[_k] : _k;
+    var chars = key.split('');
+    // capitalize first character and any character following an underscore
+    var capitalize = true;
+    for(var i = 0; i < chars.length; i++) {
+      if (capitalize) {
+        chars[i] = chars[i].toUpperCase()
+        capitalize = false
+      }
+      if (chars[i] == '_') {
+        capitalize = true
+      }
+    }
+    return _.without(chars, '_').join('')
+  }
+
+  function renameOldKeys(dict) {
+    var oldKeys = _.keys(dict),
+        newKeys = _.map(oldKeys, renameOldKey),
+        oldValues = _.values(dict),
+        newValues = _.map(oldValues,
+                          function(v) {
+                            return (_.isArray(v)
+                                    ? _.map(v, renameOldKeys)
+                                    : (_.isObject(v) ? renameOldKeys(v) : v)) })
+
+    return _.chain(newKeys).zip(newValues).fromPairs().value()
+  }
+
+  turkParams = renameOldKeys(turkParams);
+  turkParams.AssignmentDurationInSeconds = extractDuration(turkParams.AssignmentDurationInSeconds)
+  turkParams.AutoApprovalDelayInSeconds = extractDuration(turkParams.AutoApprovalDelayInSeconds)
+  turkParams.Reward = turkParams.Reward + ""
+
+  var mtc = getClient(answers);
+  mtc.createHIT(turkParams).promise()
+    .then(function(e) {
+      console.log(e)
+    })
+}
+
+function getBalance(_options) {
+  // TODO: sandbox versus production
   var getAccountBalance = mturk.getAccountBalance({}).promise();
-
-  // prompt(promptSchema)
-  //   .then(function() { return getAccountBalance })
-  //   .then(function(res) {
-  //     console.log(arguments)
-  //   })
-
-  //console.log(prompt(promptSchema))
-
-  // ask(prompts).then(function() { return getAccountBalance } )
-
-  // var afterPrompt = function(err, result) {
-  //   console.log(result)
-  // }
-
-  // prompt.get(schema, afterPrompt)
-
-  // mturk.getAccountBalance({}, function(err, data) {
-  //   if (err) console.log(err, err.stack); // an error occurred
-  //   else     console.log(data);           // successful response
-  // });
+  getAccountBalance.then(function(bal) {
+    console.log(bal)
+  })
 }
 
 var args = process.argv.slice(2);
@@ -113,64 +178,18 @@ var argv = require('minimist')(process.argv.slice(2));
 var action  = argv['_'];
 
 if (action == 'create') {
-  create()
+  var settings = JSON.parse(fs.readFileSync(argv['hit-file'], 'utf8'));
+  // TODO: handle error
+  create(settings)
 }
 
-async function test() {
-  let x = await ask.askMany(
-    [{message: 'what is 5 + 1?\n> ',
-      validate: function(x) { return parseInt(x) == 6},
-      transform: function(x) { return parseInt(x) }
-     },
-     {message: 'what is 5 + 2?\n> ',
-      validate: function(x) { return parseInt(x) == 7},
-      transform: function(x) { return parseInt(x) }
-     }
-    ]
-  )
-
-  // merge value of x with createHIT
-
-  mturk.createHIT()
-}
-
-if (action == 'test') {
-  // ask.askOne(
-  //   {message: 'what is 5 + 1?\n> ',
-  //    validate: function(x) { return parseInt(x) == 6},
-  //    transform: function(x) { return parseInt(x) }
-  //   })
-  //   .then(function() {
-  //     return ask.askOne({message: 'what is 5 + 2?\n> ',
-  //             validate: function(x) { return parseInt(x) == 7},
-  //             transform: function(x) { return parseInt(x) }
-  //            })
-  //   })
-  //   .then(function(e) {
-  //     console.log('finally ' + e)
-  //   })
-
-
-  test()
+if (action == 'balance') {
+  getBalance()
 }
 
 function init() {
-  var res = ask.many(
-    [{message: 'what is 5 + 1?\n> ',
-      validate: function(x) { return parseInt(x) == 6},
-      transform: function(x) { return parseInt(x) }
-     },
-     {message: 'what is 5 + 2?\n> ',
-      validate: function(x) { return parseInt(x) == 7},
-      transform: function(x) { return parseInt(x) }
-     }
-    ]
-  )
-  console.log('res is ' + res);
 }
 
 if (action == 'init') {
   init()
 }
-
-// TODO: cosub init function to create a stub HIT config file
