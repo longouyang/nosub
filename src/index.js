@@ -16,7 +16,7 @@ var getClient = function(_opts) {
                   ? 'https://mturk-requester.us-east-1.amazonaws.com'
                   : 'https://mturk-requester-sandbox.us-east-1.amazonaws.com');
 
-  console.log('endpoint is ' + endpoint);
+  //console.log('endpoint is ' + endpoint);
 
   return new AWS.MTurk(
     {apiVersion: '2017-01-17',
@@ -105,14 +105,12 @@ function create(settings, _options) {
   <FrameHeight>${settings.frame_height}</FrameHeight>
 </ExternalQuestion>`;
 
-  var turkParams = _.chain(settings)
-      .extend(answers,
-              {question: externalQuestion})
-      .omit('url', 'environment', 'frame_height')
-      .value();
+  var allParams = _.extend({}, settings, answers, {question: externalQuestion})
 
-  // for backwards compatibility, i'll keep the old settings.json format
-  //
+  var turkParams = _ .omit(allParams, 'url', 'environment', 'frame_height');
+
+  // TODO: break backwards-compatibility, create new spec for v2
+  // (add a key for cosub version and also write a utility function to emit a json spec that works directly with aws-shell or aws-sdk-js)
 
   var renames = {'assignment_duration': 'assignment_duration_in_seconds',
                  'qualifications': 'qualification_requirements',
@@ -160,8 +158,20 @@ function create(settings, _options) {
 
   var mtc = getClient(answers);
   mtc.createHIT(turkParams).promise()
-    .then(function(e) {
-      console.log(e)
+    .then(function(data) {
+      var hit = data.HIT
+      var existingHitIds = fs.existsSync('hit-ids.json') ? JSON.parse(fs.readFileSync('hit-ids.json')) : {}
+
+      // TODO: if we already created this hit (in non-batch-mode, don't allow cosub create)
+
+      fs.writeFileSync('hit-ids.json',
+                       JSON.stringify(_.extend({}, existingHitIds, _.fromPairs([[allParams.environment, hit]]))))
+
+      console.log('Created HIT ' + hit.HITId)
+    })
+    .catch(function(err) {
+      console.log('Error creating HIT')
+      console.error(err.message)
     })
 }
 
