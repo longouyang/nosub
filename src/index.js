@@ -2,7 +2,8 @@ var AWS = require('aws-sdk'),
     _ = require('lodash'),
     minimist = require('minimist'),
     ask = require('./ask'),
-    fs = require('fs');
+    fs = require('fs'),
+    convert = require('xml-js')
 
 AWS.config.update({region:'us-east-1'});
 
@@ -138,6 +139,8 @@ function create(settings) {
   turkParams.AutoApprovalDelayInSeconds = extractDuration(turkParams.AutoApprovalDelayInSeconds)
   turkParams.Reward = turkParams.Reward + ""
 
+  // TODO: handle qualification requirements
+
   if (allParams.Batch) {
     createBatch(turkParams, answers.environment)
   } else {
@@ -219,10 +222,46 @@ function createSingle(turkParams, environment) {
                                                _.fromPairs([[environment, hit]]))))
 
       console.log('Created HIT ' + hit.HITId)
+      // TODO: add link
     })
     .catch(function(err) {
       console.log('Error creating HIT')
       console.error(err.message)
+    })
+}
+
+function downloadSingle() {
+  var data = JSON.parse(fs.readFileSync('hit-ids.json'));
+  var env = 'sandbox' // TODO: switch endpoint handling
+  var mtc = getClient({environment: env});
+  mtc
+    .listAssignmentsForHIT({HITId: data[env].HITId, AssignmentStatuses: ['Submitted', 'Approved', 'Rejected']})
+    .promise()
+    .then(function(data) {
+
+      // TODO: log how many results there are
+
+      // TODO: handle pagination
+
+      // read the xml inside each assignment, convert to js
+      _.each(data.Assignments,
+             function(a, i) {
+               var metadata = _.omit(a, 'Answer')
+               var xmlDoc = a.Answer;
+               var xmlConverted = convert.xml2js(xmlDoc, {compact: true});
+               var pairs = xmlConverted.QuestionFormAnswers.Answer
+                   .map(function(e) {
+                     return [e.QuestionIdentifier._text, JSON.parse(e.FreeText._text)]
+                   })
+               var data = _.extend({}, metadata, {answers: _.fromPairs(pairs)})
+
+               console.log('Got assn ' + i);
+               var filename = env + '-results/' + a.AssignmentId + '.json';
+               fs.writeFileSync(filename, JSON.stringify(a, null, 1))
+
+             })
+
+
     })
 }
 
@@ -238,6 +277,7 @@ var args = process.argv.slice(2);
 var argv = require('minimist')(process.argv.slice(2));
 var action  = argv['_'];
 
+// TODO: default to sandbox, specify production environment using -p or --production
 if (action == 'create') {
   var settings = JSON.parse(fs.readFileSync(argv['hit-file'], 'utf8'));
 
@@ -259,4 +299,8 @@ function init() {
 
 if (action == 'init') {
   init()
+}
+
+if (action == 'download') {
+  downloadSingle()
 }
