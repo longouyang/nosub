@@ -16,7 +16,7 @@ var endpoint = _.has(argv, 'p') || _.has(argv, 'production') ? 'production' : 's
 console.log('Running on ' + endpoint);
 
 
-// TODO: default to sandbox, specify production environment using -p or --production
+// TODO: move this logic inside the method
 if (action == 'create') {
   var settings = JSON.parse(fs.readFileSync('settings.json', 'utf8'));
   // TODO: if no settings file, run init

@@ -229,6 +229,7 @@ function createSingle(turkParams, endpoint) {
     })
 }
 
+// TODO: add --page-size option?
 function downloadSingle(endpoint) {
   var data = JSON.parse(fs.readFileSync('hit-ids.json'));
   if (!_.has(data, endpoint)) {
@@ -240,49 +241,66 @@ function downloadSingle(endpoint) {
 
   var mtc = getClient({endpoint: endpoint});
 
+  var dirName = endpoint + '-results/'
+  if (!fs.readdirSync(dirName)) {
+    fs.mkdirSync(dirName);
+  }
+
   var numAssignmentsSubmitted = 0;
-  var existingAssignmentIds = _.chain(fs.readdirSync(endpoint + '-results/'))
+  var existingAssignmentIds = _.chain(fs.readdirSync(dirName))
       .filter(function(filename) { return /\.json$/.test(filename) })
       .map(function(filename) { return filename.replace(".json", "")})
       .value()
 
-  var doPaginatedDownload = function(nextToken) {
-    var assnCount = 0;
+  var doPaginatedDownload = function(nextToken, assnCount) {
+    if (typeof assnCount == 'undefined') {
+      assnCount = 0
+    }
 
     var requestParams = _.extend({HITId: HITId,
-                                  AssignmentStatuses: ['Submitted', 'Approved', 'Rejected']},
+                                  AssignmentStatuses: ['Submitted', 'Approved', 'Rejected']
+                                 },
                                  nextToken ? {NextToken: nextToken} : {})
 
     mtc
       .listAssignmentsForHIT(requestParams)
       .promise()
       .then(function(data) {
-        assnCount += data.NumResults;
-
+        //console.log(`NextToken is ${data.NextToken}`)
         // read the xml inside each assignment, convert to js
         _.each(data.Assignments,
                function(a, i) {
+                 var assnNum = assnCount + i + 1;
                  if (_.includes(existingAssignmentIds, a.AssignmentId)) {
-                   console.log(`${i} Skipping ${a.AssignmentId}`)
+                   console.log(`${assnNum} Skipping ${a.AssignmentId}`)
                    return
                  }
                  var metadata = _.omit(a, 'Answer')
                  var xmlDoc = a.Answer;
                  var xmlConverted = convert.xml2js(xmlDoc, {compact: true});
                  var pairs = xmlConverted.QuestionFormAnswers.Answer
-                   .map(function(e) {
-                     return [e.QuestionIdentifier._text, JSON.parse(e.FreeText._text)]
+                     .map(function(e) {
+                       var parsedText
+                       try {
+                         parsedText = JSON.parse(e.FreeText._text)
+                       } catch (err) {
+                         console.log(`Couldn't parse ${e.QuestionIdentifier} response so left as string: `)
+                         console.log(e.FreeText._text)
+                         parsedText = e.FreeText._text
+                       }
+
+                       return [e.QuestionIdentifier._text, parsedText]
                    })
                  var data = _.extend({}, metadata, {answers: _.fromPairs(pairs)})
 
-                 console.log(`${i} Downloaded ${a.AssignmentId}`)
+                 console.log(`${assnNum} Downloaded ${a.AssignmentId}`)
                  var filename = endpoint + '-results/' + a.AssignmentId + '.json';
                  fs.writeFileSync(filename, JSON.stringify(a, null, 1))
                })
 
         if (assnCount < numAssignmentsSubmitted) {
           return new Promise(function() {
-            doPaginatedDownload(data.NextToken)
+            doPaginatedDownload(data.NextToken, assnCount + data.NumResults)
           })
         }
       })
