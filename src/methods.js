@@ -319,16 +319,55 @@ function addTime(endpoint) {
   })
 }
 
-function getBalance(_options) {
+function balance(endpoint) {
+  var data = JSON.parse(fs.readFileSync('hit-ids.json'));
+  if (!_.has(data, endpoint)) {
+    console.error('Error: this HIT hasn\'t been created on ' + endpoint + ' yet');
+    process.exit()
+  }
+
   // TODO: sandbox versus production
-  var getAccountBalance = mturk.getAccountBalance({}).promise();
-  getAccountBalance.then(function(bal) {
-    console.log(bal)
-  })
+  var mtc = getClient({endpoint: endpoint});
+
+  mtc.getAccountBalance({})
+    .promise()
+    .then(function(data) {
+      console.log(`Available balance is ${data.AvailableBalance}`)
+    })
+    .catch(function(err) {
+      console.error('Error: ' + err)
+    })
 }
+
+// TODO: clean up output
+function status(endpoint) {
+  var data = JSON.parse(fs.readFileSync('hit-ids.json'));
+  if (!_.has(data, endpoint)) {
+    console.error('Error: this HIT hasn\'t been created on ' + endpoint + ' yet');
+    process.exit()
+  }
+
+  var HITId = data[endpoint].HITId
+
+  var mtc = getClient({endpoint: endpoint});
+
+  mtc
+    .getHIT({HITId: HITId})
+    .promise()
+    .then(function(data) {
+      console.log(data)
+    })
+    .catch(function(err) {
+      console.error(err)
+    })
+
+}
+
 
 module.exports = {
   create: create,
   download: downloadSingle,
-  addTime: addTime
+  addTime: addTime,
+  balance: balance,
+  status: status
 }
