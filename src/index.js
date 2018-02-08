@@ -41,6 +41,14 @@ if (action == 'create') {
 //   init()
 // }
 
+if (action == 'balance') {
+  methods.balance(endpoint)
+}
+
+if (action == 'status') {
+  methods.status(endpoint)
+}
+
 if (action == 'download') {
   methods.download(endpoint)
 }
