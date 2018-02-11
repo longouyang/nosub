@@ -89,13 +89,13 @@ function create(settings) {
 
   var questionsPartitioned = _.partition(allQuestions,
                                          function(q) {
-                                           return _.has(argv, q.name) && q.validate(argv[q.name])
+                                           return _.has(settings, q.name) && q.validate(settings[q.name])
                                          }),
       answeredQuestions = questionsPartitioned[0],
       unansweredQuestions = questionsPartitioned[1];
 
   var noninteractiveAnswers = _.chain(answeredQuestions)
-      .map(function(q) { return [q.name, q.transform(argv[q.name])] })
+      .map(function(q) { return [q.name, q.transform(settings[q.name])] })
       .fromPairs()
       .value();
 

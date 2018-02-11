@@ -27,7 +27,7 @@ if (action == 'create') {
   }
 
   // TODO: handle error
-  methods.create(_.extend({endpoint: endpoint}, settings))
+  methods.create(_.extend({endpoint: endpoint}, settings, argv))
 }
 
 // if (action == 'balance') {
