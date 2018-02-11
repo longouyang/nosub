@@ -316,8 +316,14 @@ function downloadSingle(endpoint) {
       numAssignmentsSubmitted = data.HIT.MaxAssignments - data.HIT.NumberOfAssignmentsAvailable
       console.log(`There are ${numAssignmentsSubmitted} submitted assignments`)
       console.log(`We have data from ${existingAssignmentIds.length}`)
+      if (numAssignmentsSubmitted == existingAssignmentIds.length) {
+        console.log('Nothing new to download.')
+      } else {
+        return new Promise(function() {
+          return doPaginatedDownload()
+        })
+      }
     })
-    .then(doPaginatedDownload)
 
 }
 
