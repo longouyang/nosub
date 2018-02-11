@@ -6,6 +6,15 @@ var AWS = require('aws-sdk'),
     convert = require('xml-js'),
     assert = require('assert');
 
+function readSettings(endpoint) {
+  var data = JSON.parse(fs.readFileSync('hit-ids.json'));
+  if (!_.has(data, endpoint)) {
+    console.error('Error: this HIT hasn\'t been created on ' + endpoint + ' yet');
+    process.exit()
+  }
+  return data[endpoint]
+}
+
 // returns an mturk instance for either production or sandbox
 // HT https://github.com/aws/aws-sdk-js/issues/1390
 var getClient = function(_opts) {
@@ -231,14 +240,7 @@ function createSingle(turkParams, endpoint) {
 
 // TODO: add --page-size option?
 function downloadSingle(endpoint) {
-  var data = JSON.parse(fs.readFileSync('hit-ids.json'));
-  if (!_.has(data, endpoint)) {
-    console.error('Error: this HIT hasn\'t been created on ' + endpoint + ' yet');
-    process.exit()
-  }
-
-  var HITId = data[endpoint].HITId
-
+  var HITId = readSettings(endpoint).HITId;
   var mtc = getClient({endpoint: endpoint});
 
   var dirName = endpoint + '-results/'
@@ -327,14 +329,12 @@ function downloadSingle(endpoint) {
 
 }
 
-function addTime(endpoint) {
-  var data = JSON.parse(fs.readFileSync('hit-ids.json'));
-  if (!_.has(data, endpoint)) {
-    console.error('Error: this HIT hasn\'t been created on ' + endpoint + ' yet');
-    process.exit()
-  }
+function downloadBatch(endpoint) {
+//  if ()
+}
 
-  var HITId = data[endpoint].HITId
+function addTime(endpoint) {
+  var HITId = readSettings(endpoint).HITId;
 
   var mtc = getClient({endpoint: endpoint})
 
@@ -344,11 +344,7 @@ function addTime(endpoint) {
 }
 
 function balance(endpoint) {
-  var data = JSON.parse(fs.readFileSync('hit-ids.json'));
-  if (!_.has(data, endpoint)) {
-    console.error('Error: this HIT hasn\'t been created on ' + endpoint + ' yet');
-    process.exit()
-  }
+  var HITId = readSettings(endpoint).HITId;
 
   // TODO: sandbox versus production
   var mtc = getClient({endpoint: endpoint});
@@ -365,13 +361,7 @@ function balance(endpoint) {
 
 // TODO: clean up output
 function status(endpoint) {
-  var data = JSON.parse(fs.readFileSync('hit-ids.json'));
-  if (!_.has(data, endpoint)) {
-    console.error('Error: this HIT hasn\'t been created on ' + endpoint + ' yet');
-    process.exit()
-  }
-
-  var HITId = data[endpoint].HITId
+  var HITId = readSettings(endpoint).HITId;
 
   var mtc = getClient({endpoint: endpoint});
 
