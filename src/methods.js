@@ -292,11 +292,11 @@ function downloadSingle(endpoint) {
                        }
 
                        return [e.QuestionIdentifier._text, parsedText]
-                   })
+                     })
                  var data = _.extend({}, metadata, {answers: _.fromPairs(pairs)})
 
                  console.log(`${assnNum} Downloaded ${a.AssignmentId}`)
-                 var filename = endpoint + '-results/' + a.AssignmentId + '.json';
+                 var filename = dirName + a.AssignmentId + '.json';
                  fs.writeFileSync(filename, JSON.stringify(a, null, 1))
                })
 
