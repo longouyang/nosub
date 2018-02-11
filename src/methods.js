@@ -238,22 +238,9 @@ function createSingle(turkParams, endpoint) {
     })
 }
 
-// TODO: add --page-size option?
-function downloadSingle(endpoint) {
-  var HITId = readSettings(endpoint).HITId;
-  var mtc = getClient({endpoint: endpoint});
-
-  var dirName = endpoint + '-results/'
-  if (!fs.readdirSync(dirName)) {
-    fs.mkdirSync(dirName);
-  }
-
-  var numAssignmentsSubmitted = 0;
-  var existingAssignmentIds = _.chain(fs.readdirSync(dirName))
-      .filter(function(filename) { return /\.json$/.test(filename) })
-      .map(function(filename) { return filename.replace(".json", "")})
-      .value()
-
+// helper shared by downloadSingle and downloadBatch
+// TODO: understand why i can't directly .then() on output of this
+function downloadAssignmentsForHITId(mtc, dirName, HITId, k) {
   var doPaginatedDownload = function(nextToken, assnCount) {
     if (typeof assnCount == 'undefined') {
       assnCount = 0
@@ -264,7 +251,7 @@ function downloadSingle(endpoint) {
                                  },
                                  nextToken ? {NextToken: nextToken} : {})
 
-    mtc
+    return mtc
       .listAssignmentsForHIT(requestParams)
       .promise()
       .then(function(data) {
@@ -311,26 +298,82 @@ function downloadSingle(endpoint) {
       })
   }
 
-  mtc
-    .getHIT({HITId: HITId})
-    .promise()
-    .then(function(data) {
-      numAssignmentsSubmitted = data.HIT.MaxAssignments - data.HIT.NumberOfAssignmentsAvailable
-      console.log(`There are ${numAssignmentsSubmitted} submitted assignments`)
-      console.log(`We have data from ${existingAssignmentIds.length}`)
-      if (numAssignmentsSubmitted == existingAssignmentIds.length) {
-        console.log('Nothing new to download.')
-      } else {
-        return new Promise(function() {
-          return doPaginatedDownload()
-        })
-      }
-    })
+  var numAssignmentsSubmitted = 0;
+  var existingAssignmentIds = _.chain(fs.readdirSync(dirName))
+      .filter(function(filename) { return /\.json$/.test(filename) })
+      .map(function(filename) { return filename.replace(".json", "")})
+      .value()
 
+  console.log(`Getting status of HIT ${HITId}`)
+
+  return new Promise(function() {
+    mtc
+      .getHIT({HITId: HITId})
+      .promise()
+      .then(function(data) {
+        numAssignmentsSubmitted = data.HIT.MaxAssignments - data.HIT.NumberOfAssignmentsAvailable
+        console.log(`There are ${numAssignmentsSubmitted} submitted assignments`)
+        console.log(`We have data from ${existingAssignmentIds.length}`)
+        if (numAssignmentsSubmitted == existingAssignmentIds.length) {
+          console.log('Nothing new to download.')
+        } else {
+          return new Promise(function() {
+            return doPaginatedDownload()
+          })
+        }
+      })
+      .catch(function(err) {
+        console.log('Error: ', err)
+      }).then(k)
+  })
+}
+
+function download(endpoint) {
+  var settings = readSettings(endpoint);
+  if (_.isArray(settings)) {
+    console.log('batch')
+    downloadBatch(endpoint)
+  } else {
+    downloadSingle(endpoint)
+  }
+}
+
+// TODO: add --page-size option?
+function downloadSingle(endpoint) {
+  var HITId = readSettings(endpoint).HITId;
+  var mtc = getClient({endpoint: endpoint});
+
+  var dirName = endpoint + '-results/'
+  if (!fs.readdirSync(dirName)) {
+    fs.mkdirSync(dirName);
+  }
+
+  downloadAssignmentsForHITId(mtc, dirName, HITId)
 }
 
 function downloadBatch(endpoint) {
-//  if ()
+  var HITs = readSettings(endpoint)
+  var HITIds = _.map(HITs, 'HIT.HITId')
+
+  var dirName = endpoint + '-results/'
+  // TODO: fix bug here
+  // if (!fs.accessSync(dirName)) {
+  //   fs.mkdirSync(dirName);
+  // }
+
+  var mtc = getClient({endpoint: endpoint})
+
+  var iterator = function(i) {
+    console.log('iterator',i)
+
+    var HITId = HITIds[i]
+    return downloadAssignmentsForHITId(mtc, dirName, HITId, function() {
+      return (i == HITIds.length) ? null : iterator(i + 1)
+    })
+  }
+  return new Promise(function() {
+    return iterator(0)
+  })
 }
 
 function addTime(endpoint) {
@@ -378,7 +421,7 @@ function status(endpoint) {
 
 module.exports = {
   create: create,
-  download: downloadSingle,
+  download: download,
   addTime: addTime,
   balance: balance,
   status: status
