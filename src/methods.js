@@ -230,7 +230,7 @@ function createSingle(turkParams, endpoint) {
                                                _.fromPairs([[endpoint, hit]]))))
 
       console.log('Created HIT ' + hit.HITId)
-      // TODO: add link
+      // TODO: add preview link
     })
     .catch(function(err) {
       console.log('Error creating HIT')
@@ -345,8 +345,6 @@ function addTime(endpoint) {
 
 function balance(endpoint) {
   var HITId = readSettings(endpoint).HITId;
-
-  // TODO: sandbox versus production
   var mtc = getClient({endpoint: endpoint});
 
   mtc.getAccountBalance({})
