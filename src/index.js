@@ -30,20 +30,13 @@ if (action == 'create') {
   methods.create(_.extend({endpoint: endpoint}, settings, argv))
 }
 
-// if (action == 'balance') {
-//   getBalance()
-// }
-
-// function init() {
-// }
+if (action == 'balance') {
+  methods.balance(endpoint)
+}
 
 // if (action == 'init') {
 //   init()
 // }
-
-if (action == 'balance') {
-  methods.balance(endpoint)
-}
 
 if (action == 'status') {
   methods.status(endpoint)
