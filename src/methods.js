@@ -344,7 +344,9 @@ function downloadSingle(endpoint) {
   var mtc = getClient({endpoint: endpoint});
 
   var dirName = endpoint + '-results/'
-  if (!fs.readdirSync(dirName)) {
+  try {
+    fs.readdirSync(dirName)
+  } catch(err) {
     fs.mkdirSync(dirName);
   }
 
@@ -356,10 +358,11 @@ function downloadBatch(endpoint) {
   var HITIds = _.map(HITs, 'HIT.HITId')
 
   var dirName = endpoint + '-results/'
-  // TODO: fix bug here
-  // if (!fs.accessSync(dirName)) {
-  //   fs.mkdirSync(dirName);
-  // }
+  try {
+    fs.readdirSync(dirName)
+  } catch(err) {
+    fs.mkdirSync(dirName);
+  }
 
   var mtc = getClient({endpoint: endpoint})
 
