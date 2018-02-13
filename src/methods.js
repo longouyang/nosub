@@ -363,7 +363,7 @@ function download(creationData, deanonymize, endpoint) {
 
 
 function addTimeSingle(seconds, endpoint) {
-  var HITId = readSettings(endpoint).HITId;
+  var HITId = readCreationData(endpoint).HITId;
 
   var mtc = getClient({endpoint: endpoint})
   var newDate;
@@ -385,9 +385,10 @@ function addTimeSingle(seconds, endpoint) {
     })
 }
 
+
 function addTimeBatch(endpoint) {
   console.log('here')
-  var settings = readSettings(endpoint);
+  var settings = readCreationData(endpoint);
   console.log(settings)
 
   var mtc = getClient({endpoint: endpoint})
@@ -405,7 +406,7 @@ function addTimeBatch(endpoint) {
 
 
 function balance(endpoint) {
-  var HITId = readSettings(endpoint).HITId;
+  var HITId = readCreationData(endpoint).HITId;
   var mtc = getClient({endpoint: endpoint});
 
   mtc.getAccountBalance({})
