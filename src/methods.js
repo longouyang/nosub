@@ -287,7 +287,7 @@ function downloadAssignmentsForHITId(mtc, dirName, HITId, k) {
                  fs.writeFileSync(filename, JSON.stringify(a, null, 1))
                })
 
-        if (assnCount < numAssignmentsSubmitted) {
+        if (assnCount < numSubmitted) {
           return new Promise(function() {
             doPaginatedDownload(data.NextToken, assnCount + data.NumResults)
           })
@@ -298,7 +298,7 @@ function downloadAssignmentsForHITId(mtc, dirName, HITId, k) {
       })
   }
 
-  var numAssignmentsSubmitted = 0;
+  var numSubmitted = 0;
   var existingAssignmentIds = _.chain(fs.readdirSync(dirName))
       .filter(function(filename) { return /\.json$/.test(filename) })
       .map(function(filename) { return filename.replace(".json", "")})
@@ -311,11 +311,14 @@ function downloadAssignmentsForHITId(mtc, dirName, HITId, k) {
       .getHIT({HITId: HITId})
       .promise()
       .then(function(data) {
-        numAssignmentsSubmitted = data.HIT.MaxAssignments - data.HIT.NumberOfAssignmentsAvailable
-        console.log(`There are ${numAssignmentsSubmitted} submitted assignments`)
-        console.log(`We have data from ${existingAssignmentIds.length}`)
-        if (numAssignmentsSubmitted == existingAssignmentIds.length) {
-          console.log('Nothing new to download.')
+        numSubmitted = data.HIT.MaxAssignments - data.HIT.NumberOfAssignmentsAvailable
+        if (numSubmitted == 0) {
+          console.log('No assignments completed yet.')
+        } else {
+          console.log(`We have ${existingAssignmentIds.length}/${numSubmitted} assignments`)
+        }
+        if (numSubmitted == existingAssignmentIds.length) {
+          //console.log('Nothing new to download.')
         } else {
           return new Promise(function() {
             return doPaginatedDownload()
@@ -333,7 +336,7 @@ function downloadAssignmentsForHITId(mtc, dirName, HITId, k) {
 function download(endpoint) {
   var settings = readSettings(endpoint);
   if (_.isArray(settings)) {
-    console.log('batch')
+    //console.log('batch')
     downloadBatch(endpoint)
   } else {
     downloadSingle(endpoint)
