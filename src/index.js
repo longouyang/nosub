@@ -43,7 +43,8 @@ if (action == 'status') {
 }
 
 if (action == 'download') {
-  methods.download(endpoint)
+  var deanonymize = !!(argv.deanonymize);
+  methods.download(!!argv.deanonymize, endpoint)
 }
 
 if (action == 'add') {

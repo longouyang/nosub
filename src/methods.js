@@ -4,7 +4,8 @@ var AWS = require('aws-sdk'),
     ask = require('./ask'),
     fs = require('fs'),
     convert = require('xml-js'),
-    assert = require('assert');
+    assert = require('assert'),
+    crypto = require('crypto');
 
 function readSettings(endpoint) {
   var data = JSON.parse(fs.readFileSync('hit-ids.json'));
@@ -240,7 +241,10 @@ function createSingle(turkParams, endpoint) {
 
 // helper shared by downloadSingle and downloadBatch
 // TODO: understand why i can't directly .then() on output of this
-function downloadAssignmentsForHITId(mtc, dirName, HITId, k) {
+// this anonymizes worker ids by running md5 on the access key id salted
+// with the worker id. this ensures that the same researcher / research group
+// can reliably compare workers across hits
+function downloadAssignmentsForHITId(mtc, dirName, HITId, deanonymize, k) {
   var doPaginatedDownload = function(nextToken, assnCount) {
     if (typeof assnCount == 'undefined') {
       assnCount = 0
@@ -250,6 +254,8 @@ function downloadAssignmentsForHITId(mtc, dirName, HITId, k) {
                                   AssignmentStatuses: ['Submitted', 'Approved', 'Rejected']
                                  },
                                  nextToken ? {NextToken: nextToken} : {})
+
+    var hash = crypto.createHash('md5');
 
     return mtc
       .listAssignmentsForHIT(requestParams)
@@ -265,6 +271,12 @@ function downloadAssignmentsForHITId(mtc, dirName, HITId, k) {
                    return
                  }
                  var metadata = _.omit(a, 'Answer')
+                 if (!deanonymize) {
+                   var salt = AWS.config.credentials.accessKeyId
+                   var digest = crypto.createHash('md5').update(salt + metadata.WorkerId).digest('hex');
+                   console.log(digest)
+                   metadata.WorkerId = digest;
+                 }
                  var xmlDoc = a.Answer;
                  var xmlConverted = convert.xml2js(xmlDoc, {compact: true});
                  var pairs = xmlConverted.QuestionFormAnswers.Answer
@@ -334,18 +346,18 @@ function downloadAssignmentsForHITId(mtc, dirName, HITId, k) {
 
 }
 
-function download(endpoint) {
+function download(deanonymize, endpoint) {
   var settings = readSettings(endpoint);
   if (_.isArray(settings)) {
     //console.log('batch')
-    downloadBatch(endpoint)
+    downloadBatch(deanonymize, endpoint)
   } else {
-    downloadSingle(endpoint)
+    downloadSingle(deanonymize, endpoint)
   }
 }
 
 // TODO: add --page-size option?
-function downloadSingle(endpoint) {
+function downloadSingle(deanonymize, endpoint) {
   var HITId = readSettings(endpoint).HITId;
   var mtc = getClient({endpoint: endpoint});
 
@@ -356,10 +368,10 @@ function downloadSingle(endpoint) {
     fs.mkdirSync(dirName);
   }
 
-  downloadAssignmentsForHITId(mtc, dirName, HITId)
+  downloadAssignmentsForHITId(mtc, dirName, HITId, deanonymize)
 }
 
-function downloadBatch(endpoint) {
+function downloadBatch(anonymize, endpoint) {
   var HITs = readSettings(endpoint)
   var HITIds = _.map(HITs, 'HIT.HITId')
 
@@ -375,7 +387,9 @@ function downloadBatch(endpoint) {
   var iterator = function(i) {
     var HITId = HITIds[i]
     console.log(`Processing batch ${i}`)
-    return downloadAssignmentsForHITId(mtc, dirName, HITId, function() {
+    return downloadAssignmentsForHITId(mtc, dirName, HITId,
+                                       anonymize,
+                                       function() {
       return (i + 1 == HITIds.length) ? null : iterator(i + 1)
     })
   }
