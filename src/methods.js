@@ -306,6 +306,7 @@ function downloadAssignmentsForHITId(mtc, dirName, HITId, k) {
 
   console.log(`Getting status of HIT ${HITId}`)
 
+
   return new Promise(function() {
     mtc
       .getHIT({HITId: HITId})
@@ -383,15 +384,46 @@ function downloadBatch(endpoint) {
   })
 }
 
-function addTime(endpoint) {
+function addTimeSingle(seconds, endpoint) {
   var HITId = readSettings(endpoint).HITId;
 
   var mtc = getClient({endpoint: endpoint})
+  var newDate;
 
-  mtc.getHIT({HITId: HITId}).promise().then(function(data) {
-    console.log(data.HIT.Expiration)
-  })
+  mtc.getHIT({HITId: HITId}).promise()
+    .then(function(data) {
+      var oldExpiration = (new Date(data.HIT.Expiration)).getTime();
+      var newExpiration = oldExpiration + (seconds * 1000);
+      newDate = new Date(newExpiration);
+      return mtc.updateExpirationForHIT({HITId: HITId, ExpireAt: newDate}).promise()
+    })
+    .then(function(data) {
+      // aws returns an empty response
+      console.log('New expiration is ' + newDate.toString())
+    })
+    .catch(function(err) {
+      console.log(err)
+    })
 }
+
+function addTimeBatch(endpoint) {
+  console.log('here')
+  var settings = readSettings(endpoint);
+  console.log(settings)
+
+  var mtc = getClient({endpoint: endpoint})
+
+  // mtc.getHIT({HITId: HITId}).promise().then(function(data) {
+  //   console.log(data.HIT.Expiration)
+  // })
+
+  // only add time to partially completed HITs
+
+  // mtc.getHIT({HITId: HITId}).promise().then(function(data) {
+  //   console.log(data.HIT.Expiration)
+  // })
+}
+
 
 function balance(endpoint) {
   var HITId = readSettings(endpoint).HITId;
@@ -429,7 +461,7 @@ function status(endpoint) {
 module.exports = {
   create: create,
   download: download,
-  addTime: addTime,
+  addTime: addTimeSingle,
   balance: balance,
   status: status
 }

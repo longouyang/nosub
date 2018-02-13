@@ -10,11 +10,12 @@ AWS.config.update({region:'us-east-1'});
 
 var args = process.argv.slice(2);
 var argv = require('minimist')(process.argv.slice(2));
-var action  = argv['_'];
+var action  = _.isArray(argv['_']) ? argv['_'][0] : argv['_'];
 
 var endpoint = _.has(argv, 'p') || _.has(argv, 'production') ? 'production' : 'sandbox';
 console.log('Running on ' + endpoint);
 
+// TODO: read settings here, then rewrite methods to take HITId as an argument
 
 // TODO: move this logic inside the method
 if (action == 'create') {
@@ -26,7 +27,6 @@ if (action == 'create') {
     process.exit()
   }
 
-  // TODO: handle error
   methods.create(_.extend({endpoint: endpoint}, settings, argv))
 }
 
@@ -46,8 +46,20 @@ if (action == 'download') {
   methods.download(endpoint)
 }
 
-
 if (action == 'add') {
-  // TODO: detect if we're adding time, assignments, or both
-  methods.addTime(endpoint)
+  var argument = argv['_'].slice(1).join(' ')
+  var timeMatch = argument.match(/(\d+) (second|minute|day|hour|week|month)/g)
+  var assignmentsMatch = argument.match(/(\d+) (assignment)s?/)
+
+  // handles mixing multiple units (e.g., 1 hour and 30 minutes)
+  if (timeMatch) {
+    var components = timeMatch.map(function(tm) { return tm.split(' ') })
+    var componentSeconds = components.map(function(pair) {
+      return parseInt(pair[0]) * {second: 1, minute: 60, hour: 3600, day: 86400, week: 604800}[pair[1]];
+    })
+    var totalTime = _.sum(componentSeconds)
+    //var seconds = timeMatch[2]
+    methods.addTime(totalTime, endpoint)
+  }
+  //methods.addTime(endpoint)
 }
