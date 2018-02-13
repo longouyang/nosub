@@ -322,10 +322,12 @@ function downloadAssignmentsForHITId(mtc, dirName, HITId, k) {
           })
         }
       })
+      .then(_.isFunction(k) ? k : Promise.resolve())
       .catch(function(err) {
         console.log('Error: ', err)
-      }).then(k)
+      })
   })
+
 }
 
 function download(endpoint) {
