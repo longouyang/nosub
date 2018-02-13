@@ -182,6 +182,7 @@ function createBatch(turkParams, endpoint) {
                              })
 
       console.log('Created HITs:');
+      // TODO: switch to .reduce() chaining
       var promises = batchSizes.map(function(size, i) {
         return delay(i * 500).then(
           function() {
@@ -239,13 +240,8 @@ function createSingle(turkParams, endpoint) {
     })
 }
 
-function downloadHelper(opts) {
-  var mtc = opts.mtc,
-      dirName = opts.dirName,
-      HITId = opts.HITId,
-      deanonymize = opts.deanonymize;
-
-  var doPaginatedDownload = function(nextToken, assnCount) {
+function paginatedDownload(HITId, dirName, deanonymize, mtc) {
+  var nextDownload = function(nextToken, assnCount) {
     if (typeof assnCount == 'undefined') {
       assnCount = 0
     }
@@ -300,7 +296,7 @@ function downloadHelper(opts) {
 
         if (assnCount < numSubmitted) {
           return new Promise(function() {
-            doPaginatedDownload(data.NextToken, assnCount + data.NumResults)
+            nextDownload(data.NextToken, assnCount + data.NumResults)
           })
         }
       })
@@ -330,7 +326,7 @@ function downloadHelper(opts) {
       if (numSubmitted == existingAssignmentIds.length) {
         return null
       } else {
-        return doPaginatedDownload()
+        return nextDownload()
       }
     })
     .catch(function(err) {
@@ -339,28 +335,26 @@ function downloadHelper(opts) {
 
 }
 
-function download(opts) {
-  // TODO: assert that HIT has been created on this endpoint
-  var endpoint = opts.endpoint;
-  var creationData = opts.creationData[endpoint];
-  var dirName = endpoint + '-results/'
+function download(creationData, deanonymize, endpoint) {
   var mtc = getClient({endpoint: endpoint});
-  var newOpts = _.extend({dirName: dirName, mtc: mtc}, opts)
+  var dirName = endpoint + '-results/'
   try {
     fs.readdirSync(dirName)
   } catch(err) {
     fs.mkdirSync(dirName);
   }
-  if (!_.isArray(creationData)) {
-    newOpts.HITId = creationData.HITId;
-    return downloadHelper(newOpts)
-    //console.log('batch')
+
+  var isSingleMode = !_.isArray(creationData);
+
+  if (isSingleMode) {
+    var HITId = creationData.HITId;
+    return paginatedDownload(HITId, dirName, deanonymize, mtc)
   } else {
     var HITIds = _.map(creationData, 'HIT.HITId')
 
-    return HITIds.reduce(function(acc, id) {
+    return HITIds.reduce(function(acc, HITId) {
       return acc.then(function(res) {
-        return downloadHelper(_.extend({HITId: id}, newOpts))
+        return paginatedDownload(HITId, dirName, deanonymize, mtc)
       })
     }, Promise.resolve([]))
 

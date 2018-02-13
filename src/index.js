@@ -25,11 +25,11 @@ try {
 }
 
 
-var creationData = {};
+var creationData;
 try {
-  creationData = JSON.parse(fs.readFileSync('hit-ids.json'))
+  creationData = JSON.parse(fs.readFileSync('hit-ids.json'))[endpoint]
 } catch(err) {
-  console.log(err)
+  //console.log(err)
 }
 
 
@@ -58,10 +58,12 @@ if (action == 'status') {
 }
 
 if (action == 'download') {
-  methods.download({endpoint: endpoint,
-                    settings: settings,
-                    creationData: creationData
-                   })
+  if(!creationData) {
+    console.error('Error: HIT has not been created yet.')
+    process.exit()
+  }
+
+  methods.download(creationData, !!argv.deanonymize, endpoint)
 }
 
 if (action == 'add') {
