@@ -13,7 +13,6 @@ var argv = require('minimist')(process.argv.slice(2));
 var action  = _.isArray(argv['_']) ? argv['_'][0] : argv['_'];
 
 var endpoint = _.has(argv, 'p') || _.has(argv, 'production') ? 'production' : 'sandbox';
-console.log('Running on ' + endpoint);
 
 // TODO: read settings here, then rewrite methods to take HITId as an argument
 var settings = {}

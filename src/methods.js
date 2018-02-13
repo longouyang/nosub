@@ -18,15 +18,15 @@ function readSettings(endpoint) {
 
 // returns an mturk instance for either production or sandbox
 // HT https://github.com/aws/aws-sdk-js/issues/1390
-var getClient = function(_opts) {
-  var opts = _.defaults(_opts || {},
-                        {endpoint: 'sandbox'})
+var getClient = function(opts) {
+  assert.ok(_.includes(['production', 'sandbox'], opts.endpoint),
+            'Unknown API endpoint ' + opts.endpoint)
 
   var endpoint = (opts.endpoint == 'production'
                   ? 'https://mturk-requester.us-east-1.amazonaws.com'
                   : 'https://mturk-requester-sandbox.us-east-1.amazonaws.com');
 
-  //console.log('endpoint is ' + endpoint);
+  console.log('Running on ' + opts.endpoint);
 
   return new AWS.MTurk(
     {apiVersion: '2017-01-17',
