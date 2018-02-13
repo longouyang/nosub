@@ -364,11 +364,10 @@ function downloadBatch(endpoint) {
   var mtc = getClient({endpoint: endpoint})
 
   var iterator = function(i) {
-    console.log('iterator',i)
-
     var HITId = HITIds[i]
+    console.log(`Processing batch ${i}`)
     return downloadAssignmentsForHITId(mtc, dirName, HITId, function() {
-      return (i == HITIds.length) ? null : iterator(i + 1)
+      return (i + 1 == HITIds.length) ? null : iterator(i + 1)
     })
   }
   return new Promise(function() {
