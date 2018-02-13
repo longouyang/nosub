@@ -7,7 +7,18 @@ var AWS = require('aws-sdk'),
     assert = require('assert'),
     crypto = require('crypto');
 
-function readSettings(endpoint) {
+// taskizer(item) returns a promise
+function SerialPromises(items, taskizer) {
+  return items.reduce(function(acc, item) {
+    return acc.then(function(res) {
+      var task = taskizer(item);
+      return task
+    })
+  }, Promise.resolve([]))
+}
+
+
+function readCreationData(endpoint) {
   var data = JSON.parse(fs.readFileSync('hit-ids.json'));
   if (!_.has(data, endpoint)) {
     console.error('Error: this HIT hasn\'t been created on ' + endpoint + ' yet');
@@ -352,11 +363,15 @@ function download(creationData, deanonymize, endpoint) {
   } else {
     var HITIds = _.map(creationData, 'HIT.HITId')
 
-    return HITIds.reduce(function(acc, HITId) {
-      return acc.then(function(res) {
-        return paginatedDownload(HITId, dirName, deanonymize, mtc)
-      })
-    }, Promise.resolve([]))
+    return SerialPromises(HITIds, function(id) {
+      return paginatedDownload(id, dirName, deanonymize, mtc)
+    })
+
+    // return HITIds.reduce(function(acc, HITId) {
+    //   return acc.then(function(res) {
+    //     return paginatedDownload(HITId, dirName, deanonymize, mtc)
+    //   })
+    // }, Promise.resolve([]))
 
   }
 }
@@ -393,6 +408,8 @@ function addTimeBatch(endpoint) {
 
   var mtc = getClient({endpoint: endpoint})
 
+
+
   // mtc.getHIT({HITId: HITId}).promise().then(function(data) {
   //   console.log(data.HIT.Expiration)
   // })
@@ -420,12 +437,12 @@ function balance(endpoint) {
 }
 
 // TODO: clean up output
-function status(endpoint) {
-  var HITId = readSettings(endpoint).HITId;
+function statusSingle(HITId, endpoint) {
+//  var HITId = readCreationData(endpoint).HITId;
 
   var mtc = getClient({endpoint: endpoint});
 
-  mtc
+  return mtc
     .getHIT({HITId: HITId})
     .promise()
     .then(function(data) {
@@ -434,7 +451,15 @@ function status(endpoint) {
     .catch(function(err) {
       console.error(err)
     })
+}
 
+function statusBatch(endpoint) {
+  var HITIds = _.map(readCreationData(endpoint), 'HIT.HITId')
+  SerialPromises(HITIds,
+                 function(HITId) {
+                   return statusSingle(HITId, endpoint)
+                 }
+                )
 }
 
 
@@ -443,5 +468,5 @@ module.exports = {
   download: download,
   addTime: addTimeSingle,
   balance: balance,
-  status: status
+  status: statusBatch
 }
