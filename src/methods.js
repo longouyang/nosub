@@ -406,7 +406,8 @@ function addTimeSingle(seconds, endpoint) {
 
   mtc.getHIT({HITId: HITId}).promise()
     .then(function(data) {
-      var oldExpiration = (new Date(data.HIT.Expiration)).getTime();
+      var oldExpiration = Math.max(Date.now(),
+                                   (new Date(data.HIT.Expiration)).getTime());
       var newExpiration = oldExpiration + (seconds * 1000);
       newDate = new Date(newExpiration);
       return mtc.updateExpirationForHIT({HITId: HITId, ExpireAt: newDate}).promise()
