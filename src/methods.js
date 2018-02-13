@@ -35,7 +35,7 @@ var getClient = function(_opts) {
 }
 
 // TODO? in addition to command-line and stdin interfaces, also allow programmatic access
-function create(settings) {
+function create(opts) {
   // TODO: if we already created this hit (in non-batch-mode, don't allow cosub create)
 
   var unitsToSeconds = {second: 1, minute: 60, hour: 3600, day: 86400, week: 604800};
@@ -90,13 +90,13 @@ function create(settings) {
 
   var questionsPartitioned = _.partition(allQuestions,
                                          function(q) {
-                                           return _.has(settings, q.name) && q.validate(settings[q.name])
+                                           return _.has(opts, q.name) && q.validate(opts[q.name])
                                          }),
       answeredQuestions = questionsPartitioned[0],
       unansweredQuestions = questionsPartitioned[1];
 
   var noninteractiveAnswers = _.chain(answeredQuestions)
-      .map(function(q) { return [q.name, q.transform(settings[q.name])] })
+      .map(function(q) { return [q.name, q.transform(opts[q.name])] })
       .fromPairs()
       .value();
 
@@ -108,11 +108,11 @@ function create(settings) {
 
   var externalQuestion =
       `<ExternalQuestion xmlns="http://mechanicalturk.amazonaws.com/AWSMechanicalTurkDataSchemas/2006-07-14/ExternalQuestion.xsd">
-  <ExternalURL>${settings.Url}</ExternalURL>
-  <FrameHeight>${settings.FrameHeight}</FrameHeight>
+  <ExternalURL>${opts.Url}</ExternalURL>
+  <FrameHeight>${opts.FrameHeight}</FrameHeight>
 </ExternalQuestion>`;
 
-  var allParams = _.extend({}, settings, answers, {Question: externalQuestion})
+  var allParams = _.extend({}, opts, answers, {Question: externalQuestion})
 
   var renames = {
     'duration': 'LifetimeInSeconds',
@@ -239,12 +239,12 @@ function createSingle(turkParams, endpoint) {
     })
 }
 
-// helper shared by downloadSingle and downloadBatch
-// TODO: understand why i can't directly .then() on output of this
-// this anonymizes worker ids by running md5 on the access key id salted
-// with the worker id. this ensures that the same researcher / research group
-// can reliably compare workers across hits
-function downloadAssignmentsForHITId(mtc, dirName, HITId, deanonymize, k) {
+function downloadHelper(opts) {
+  var mtc = opts.mtc,
+      dirName = opts.dirName,
+      HITId = opts.HITId,
+      deanonymize = opts.deanonymize;
+
   var doPaginatedDownload = function(nextToken, assnCount) {
     if (typeof assnCount == 'undefined') {
       assnCount = 0
@@ -274,7 +274,6 @@ function downloadAssignmentsForHITId(mtc, dirName, HITId, deanonymize, k) {
                  if (!deanonymize) {
                    var salt = AWS.config.credentials.accessKeyId
                    var digest = crypto.createHash('md5').update(salt + metadata.WorkerId).digest('hex');
-                   console.log(digest)
                    metadata.WorkerId = digest;
                  }
                  var xmlDoc = a.Answer;
@@ -318,85 +317,56 @@ function downloadAssignmentsForHITId(mtc, dirName, HITId, deanonymize, k) {
 
   console.log(`Getting status of HIT ${HITId}`)
 
-
-  return new Promise(function() {
-    mtc
-      .getHIT({HITId: HITId})
-      .promise()
-      .then(function(data) {
-        numSubmitted = data.HIT.MaxAssignments - data.HIT.NumberOfAssignmentsAvailable
-        if (numSubmitted == 0) {
-          console.log('No assignments completed yet.')
-        } else {
-          console.log(`We have ${existingAssignmentIds.length}/${numSubmitted} assignments`)
-        }
-        if (numSubmitted == existingAssignmentIds.length) {
-          //console.log('Nothing new to download.')
-        } else {
-          return new Promise(function() {
-            return doPaginatedDownload()
-          })
-        }
-      })
-      .then(_.isFunction(k) ? k : Promise.resolve())
-      .catch(function(err) {
-        console.log('Error: ', err)
-      })
-  })
-
-}
-
-function download(deanonymize, endpoint) {
-  var settings = readSettings(endpoint);
-  if (_.isArray(settings)) {
-    //console.log('batch')
-    downloadBatch(deanonymize, endpoint)
-  } else {
-    downloadSingle(deanonymize, endpoint)
-  }
-}
-
-// TODO: add --page-size option?
-function downloadSingle(deanonymize, endpoint) {
-  var HITId = readSettings(endpoint).HITId;
-  var mtc = getClient({endpoint: endpoint});
-
-  var dirName = endpoint + '-results/'
-  try {
-    fs.readdirSync(dirName)
-  } catch(err) {
-    fs.mkdirSync(dirName);
-  }
-
-  downloadAssignmentsForHITId(mtc, dirName, HITId, deanonymize)
-}
-
-function downloadBatch(anonymize, endpoint) {
-  var HITs = readSettings(endpoint)
-  var HITIds = _.map(HITs, 'HIT.HITId')
-
-  var dirName = endpoint + '-results/'
-  try {
-    fs.readdirSync(dirName)
-  } catch(err) {
-    fs.mkdirSync(dirName);
-  }
-
-  var mtc = getClient({endpoint: endpoint})
-
-  var iterator = function(i) {
-    var HITId = HITIds[i]
-    console.log(`Processing batch ${i}`)
-    return downloadAssignmentsForHITId(mtc, dirName, HITId,
-                                       anonymize,
-                                       function() {
-      return (i + 1 == HITIds.length) ? null : iterator(i + 1)
+  return mtc
+    .getHIT({HITId: HITId})
+    .promise()
+    .then(function(data) {
+      numSubmitted = data.HIT.MaxAssignments - data.HIT.NumberOfAssignmentsAvailable
+      if (numSubmitted == 0) {
+        console.log('No assignments completed yet.')
+      } else {
+        console.log(`We have ${existingAssignmentIds.length}/${numSubmitted} assignments`)
+      }
+      if (numSubmitted == existingAssignmentIds.length) {
+        return null
+      } else {
+        return doPaginatedDownload()
+      }
     })
-  }
-  return new Promise(function() {
-    return iterator(0)
-  })
+    .catch(function(err) {
+      console.log('Error:', err)
+    })
+
 }
+
+function download(opts) {
+  // TODO: assert that HIT has been created on this endpoint
+  var endpoint = opts.endpoint;
+  var creationData = opts.creationData[endpoint];
+  var dirName = endpoint + '-results/'
+  var mtc = getClient({endpoint: endpoint});
+  var newOpts = _.extend({dirName: dirName, mtc: mtc}, opts)
+  try {
+    fs.readdirSync(dirName)
+  } catch(err) {
+    fs.mkdirSync(dirName);
+  }
+  if (!_.isArray(creationData)) {
+    newOpts.HITId = creationData.HITId;
+    return downloadHelper(newOpts)
+    //console.log('batch')
+  } else {
+    var HITIds = _.map(creationData, 'HIT.HITId')
+
+    return HITIds.reduce(function(acc, id) {
+      return acc.then(function(res) {
+        return downloadHelper(_.extend({HITId: id}, newOpts))
+      })
+    }, Promise.resolve([]))
+
+  }
+}
+
 
 function addTimeSingle(seconds, endpoint) {
   var HITId = readSettings(endpoint).HITId;

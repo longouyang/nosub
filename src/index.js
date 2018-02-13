@@ -16,10 +16,26 @@ var endpoint = _.has(argv, 'p') || _.has(argv, 'production') ? 'production' : 's
 console.log('Running on ' + endpoint);
 
 // TODO: read settings here, then rewrite methods to take HITId as an argument
+var settings = {}
+
+try {
+  settings = JSON.parse(fs.readFileSync('settings.json'))
+} catch(err) {
+  //console.log('no settings file found')
+  //process.exit()
+}
+
+
+var creationData = {};
+try {
+  creationData = JSON.parse(fs.readFileSync('hit-ids.json'))
+} catch(err) {
+  console.log(err)
+}
+
 
 // TODO: move this logic inside the method
 if (action == 'create') {
-  var settings = JSON.parse(fs.readFileSync('settings.json', 'utf8'));
   // TODO: if no settings file, run init
 
   if (!_.has(settings, "_cosubSpecVersion") || settings._cosubSpecVersion != 2) {
@@ -27,7 +43,7 @@ if (action == 'create') {
     process.exit()
   }
 
-  methods.create(_.extend({endpoint: endpoint}, settings, argv))
+  methods.create(_.extend({endpoint: endpoint},settings, argv))
 }
 
 if (action == 'balance') {
@@ -43,8 +59,10 @@ if (action == 'status') {
 }
 
 if (action == 'download') {
-  var deanonymize = !!(argv.deanonymize);
-  methods.download(!!argv.deanonymize, endpoint)
+  methods.download({endpoint: endpoint,
+                    settings: settings,
+                    creationData: creationData
+                   })
 }
 
 if (action == 'add') {
