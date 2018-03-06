@@ -77,9 +77,8 @@ if (action == 'add') {
     var componentSeconds = components.map(function(pair) {
       return parseInt(pair[0]) * {second: 1, minute: 60, hour: 3600, day: 86400, week: 604800}[pair[1]];
     })
-    var totalTime = _.sum(componentSeconds)
-    //var seconds = timeMatch[2]
-    methods.addTime(totalTime, endpoint)
+    var seconds = _.sum(componentSeconds)
+    methods.addTime(creationData, seconds, endpoint)
   }
   //methods.addTime(endpoint)
 }

@@ -7,16 +7,16 @@ var AWS = require('aws-sdk'),
     assert = require('assert'),
     crypto = require('crypto');
 
-// taskizer(item) returns a promise
+// translated from https://hackernoon.com/functional-javascript-resolving-promises-sequentially-7aac18c4431e
 function SerialPromises(items, taskizer) {
-  return items.reduce(function(acc, item) {
-    return acc.then(function(res) {
-      var task = taskizer(item);
-      return task
-    })
-  }, Promise.resolve([]))
+  return items.reduce(
+    function(acc, item) {
+      return acc.then(function(result) {
+        return taskizer(item).then(Array.prototype.concat.bind(result))
+      })
+    },
+    Promise.resolve([]))
 }
-
 
 function readCreationData(endpoint) {
   var data = JSON.parse(fs.readFileSync('hit-ids.json'));
@@ -376,14 +376,10 @@ function download(creationData, deanonymize, endpoint) {
   }
 }
 
-
-function addTimeSingle(seconds, endpoint) {
-  var HITId = readCreationData(endpoint).HITId;
-
-  var mtc = getClient({endpoint: endpoint})
+function HITaddTime(HITId, seconds, mtc) {
   var newDate;
 
-  mtc.getHIT({HITId: HITId}).promise()
+  return mtc.getHIT({HITId: HITId}).promise()
     .then(function(data) {
       var oldExpiration = Math.max(Date.now(),
                                    (new Date(data.HIT.Expiration)).getTime());
@@ -392,7 +388,7 @@ function addTimeSingle(seconds, endpoint) {
       return mtc.updateExpirationForHIT({HITId: HITId, ExpireAt: newDate}).promise()
     })
     .then(function(data) {
-      // aws returns an empty response
+      // aws returns an empty response, so ignore data argument
       console.log('New expiration is ' + newDate.toString())
     })
     .catch(function(err) {
@@ -400,27 +396,33 @@ function addTimeSingle(seconds, endpoint) {
     })
 }
 
+function addTime(creationData, seconds, endpoint) {
+  var mtc = getClient({endpoint: endpoint});
 
-function addTimeBatch(endpoint) {
-  console.log('here')
-  var settings = readCreationData(endpoint);
-  console.log(settings)
+  var isSingleMode = !_.isArray(creationData);
+  if (isSingleMode) {
+    return HITaddTime(creationData.HITId, seconds, mtc)
+  } else {
+    var HITIds = _.map(creationData, 'HIT.HITId')
 
-  var mtc = getClient({endpoint: endpoint})
+    return SerialPromises(HITIds, function(HITId) {
+      return mtc.getHIT({HITId: HITId}).promise()
+    }).then(function(_hits) {
+      var hits = _.map(_hits, 'HIT');
+      var inProgressHITs = _.filter(hits,
+                                    function(h) {
+                                      return h.NumberOfAssignmentsCompleted < h.NumberOfAssignmentsAvailable
+                                    })
 
+      return SerialPromises(inProgressHITs,
+                            function(h) {
+                              return HITaddTime(h.HITId, seconds, mtc)
+                            })
+    })
 
+  }
 
-  // mtc.getHIT({HITId: HITId}).promise().then(function(data) {
-  //   console.log(data.HIT.Expiration)
-  // })
-
-  // only add time to partially completed HITs
-
-  // mtc.getHIT({HITId: HITId}).promise().then(function(data) {
-  //   console.log(data.HIT.Expiration)
-  // })
 }
-
 
 function balance(endpoint) {
   var HITId = readCreationData(endpoint).HITId;
@@ -455,18 +457,14 @@ function statusSingle(HITId, endpoint) {
 
 function statusBatch(endpoint) {
   var HITIds = _.map(readCreationData(endpoint), 'HIT.HITId')
-  SerialPromises(HITIds,
-                 function(HITId) {
-                   return statusSingle(HITId, endpoint)
-                 }
-                )
+  SerialPromises(HITIds, function(HITId) { return statusSingle(HITId, endpoint)})
 }
 
 
 module.exports = {
   create: create,
   download: download,
-  addTime: addTimeSingle,
+  addTime: addTime,
   balance: balance,
   status: statusBatch
 }
