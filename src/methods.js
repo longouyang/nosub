@@ -251,7 +251,7 @@ function createSingle(turkParams, endpoint) {
     })
 }
 
-function paginatedDownload(HITId, dirName, deanonymize, mtc) {
+function HITDownloadResults(HITId, dirName, deanonymize, mtc) {
   var nextDownload = function(nextToken, assnCount) {
     if (typeof assnCount == 'undefined') {
       assnCount = 0
@@ -359,24 +359,17 @@ function download(creationData, deanonymize, endpoint) {
 
   if (isSingleMode) {
     var HITId = creationData.HITId;
-    return paginatedDownload(HITId, dirName, deanonymize, mtc)
+    return HITDownloadResults(HITId, dirName, deanonymize, mtc)
   } else {
     var HITIds = _.map(creationData, 'HIT.HITId')
 
     return SerialPromises(HITIds, function(id) {
-      return paginatedDownload(id, dirName, deanonymize, mtc)
+      return HITDownloadResults(id, dirName, deanonymize, mtc)
     })
-
-    // return HITIds.reduce(function(acc, HITId) {
-    //   return acc.then(function(res) {
-    //     return paginatedDownload(HITId, dirName, deanonymize, mtc)
-    //   })
-    // }, Promise.resolve([]))
-
   }
 }
 
-function HITaddTime(HITId, seconds, mtc) {
+function HITAddTime(HITId, seconds, mtc) {
   var newDate;
 
   return mtc.getHIT({HITId: HITId}).promise()
@@ -401,7 +394,7 @@ function addTime(creationData, seconds, endpoint) {
 
   var isSingleMode = !_.isArray(creationData);
   if (isSingleMode) {
-    return HITaddTime(creationData.HITId, seconds, mtc)
+    return HITAddTime(creationData.HITId, seconds, mtc)
   } else {
     var HITIds = _.map(creationData, 'HIT.HITId')
 
@@ -416,12 +409,11 @@ function addTime(creationData, seconds, endpoint) {
 
       return SerialPromises(inProgressHITs,
                             function(h) {
-                              return HITaddTime(h.HITId, seconds, mtc)
+                              return HITAddTime(h.HITId, seconds, mtc)
                             })
     })
 
   }
-
 }
 
 function balance(endpoint) {
