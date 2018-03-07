@@ -18,6 +18,16 @@ function SerialPromises(items, taskizer) {
     Promise.resolve([]))
 }
 
+function SerialPromises2(promisors) {
+  return promisors.reduce(
+    function(acc, promisor) {
+      return acc.then(function(result) {
+        return promisor().then(Array.prototype.concat.bind(result))
+      })
+    },
+    Promise.resolve([]))
+}
+
 function readCreationData(endpoint) {
   var data = JSON.parse(fs.readFileSync('hit-ids.json'));
   if (!_.has(data, endpoint)) {
@@ -193,9 +203,8 @@ function createBatch(turkParams, endpoint) {
                              })
 
       console.log('Created HITs:');
-      // TODO: switch to .reduce() chaining
-      var promises = batchSizes.map(function(size, i) {
-        return delay(i * 500).then(
+      return SerialPromises(batchSizes, function(size) {
+        return delay(500).then(
           function() {
             return mtc.createHITWithHITType({
               HITTypeId: data.HITTypeId,
@@ -209,7 +218,6 @@ function createBatch(turkParams, endpoint) {
           }
         )
       })
-      return Promise.all(promises)
     })
     .catch(function(err) {
       console.log('Error')
@@ -404,7 +412,7 @@ function addTime(creationData, seconds, endpoint) {
       var hits = _.map(_hits, 'HIT');
       var inProgressHITs = _.filter(hits,
                                     function(h) {
-                                      return h.NumberOfAssignmentsCompleted < h.NumberOfAssignmentsAvailable
+                                      return h.NumberOfAssignmentsCompleted < h.MaxAssignments
                                     })
 
       return SerialPromises(inProgressHITs,
@@ -420,17 +428,81 @@ function HITAddAssignments(HITId, assignments, mtc) {
   return mtc.createAdditionalAssignmentsForHIT({HITId: HITId,
                                                 NumberOfAdditionalAssignments: assignments
                                                }).promise().then(function(data) {
-                                                 console.log(`Added ${assignments} to HIT ${HITId}`)
+                                                 console.log(`Added ${assignments} assignments to HIT ${HITId}`)
                                                })
 }
 
+// testing: rm hit-ids.json; node ../src/index.js create --assignments 30 --duration "2 days"; gsleep 2s; node ../src/index.js add 29 assignments
 function addAssignments(creationData, assignments, endpoint) {
   var mtc = getClient({endpoint: endpoint});
   var isSingleMode = !_.isArray(creationData);
   if (isSingleMode) {
     return HITAddAssignments(creationData.HITId, assignments, mtc)
   } else {
-    console.error('batch assignment adding not yet implemented')
+    // first find the hit that has fewer than 9 assignments (if one exists)
+    // and top it up to 9
+    var hits = _.map(creationData, 'HIT');
+    var topupHit = _.find(hits, function(h) {
+      return h.MaxAssignments < 9
+    })
+    var topUpAmount = 0;
+
+    var promisors = [];
+
+    if (topupHit) {
+      console.log(`topping up`, topupHit.HITId)
+      topUpAmount = 9 - topupHit.MaxAssignments;
+      promisors.push(
+        function() {
+          return HITAddAssignments(topupHit.HITId, topUpAmount, mtc)
+          // wait a little bit and get new metadata for topped up hit
+          // so we can update our local information about the hit
+            .then(delay(500))
+            .then(function() {return mtc.getHIT({HITId: topupHit.HITId}).promise() })
+        }
+      )
+    }
+
+    // then create new batches of 9 and a spillover batch if necessary
+    var n = assignments - topUpAmount,
+        numBatches = Math.ceil(n / 9),
+        batchSizes = _.map(_.range(numBatches),
+                           function(i) {
+                             return i < (numBatches - 1) ? 9 :
+                               (n % 9 == 0 ? 9 : n % 9)
+                           });
+
+    promisors = promisors.concat(batchSizes.map(function(size, i) {
+      return function() {
+        return mtc.createHITWithHITType({
+          HITTypeId: creationData[0].HIT.HITTypeId,
+          MaxAssignments: size,
+          LifetimeInSeconds: "20000", // TODO
+          Question: creationData[0].HIT.Question
+        }).promise().then(function(data) {
+          console.log('Created batch ' + data.HIT.HITId)
+          return data
+        })
+      }
+    }))
+
+
+    SerialPromises2(promisors).then(function(modifiedHits) {
+      var modifiedHitIds = _.map(modifiedHits, 'HIT.HITId'),
+          unmodifiedHits = _.reject(creationData,
+                                    function(x) {return _.includes(modifiedHitIds, x.HIT.HITId)})
+
+      var existingData = fs.existsSync('hit-ids.json') ? JSON.parse(fs.readFileSync('hit-ids.json')) : {}
+
+      fs.writeFileSync('hit-ids.json',
+                       JSON.stringify(_.extend({},
+                                               existingData,
+                                               _.fromPairs([[endpoint, unmodifiedHits.concat(modifiedHits)]])),
+                                      null,
+                                      1
+                                     ))
+
+    })
   }
 }
 
