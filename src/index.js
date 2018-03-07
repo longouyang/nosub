@@ -69,7 +69,7 @@ if (action == 'download') {
 if (action == 'add') {
   var argument = argv['_'].slice(1).join(' ')
   var timeMatch = argument.match(/(\d+) (second|minute|day|hour|week|month)/g)
-  var assignmentsMatch = argument.match(/(\d+) (assignment)s?/)
+  var assignmentsMatch = argument.match(/(\d+) +(assignment)s?/)
 
   // handles mixing multiple units (e.g., 1 hour and 30 minutes)
   if (timeMatch) {
@@ -80,5 +80,8 @@ if (action == 'add') {
     var seconds = _.sum(componentSeconds)
     methods.addTime(creationData, seconds, endpoint)
   }
-  //methods.addTime(endpoint)
+  if (assignmentsMatch) {
+    var numAssignments = parseInt(assignmentsMatch[1]);
+    methods.addAssignments(creationData, numAssignments, endpoint)
+  }
 }

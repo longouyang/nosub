@@ -416,6 +416,24 @@ function addTime(creationData, seconds, endpoint) {
   }
 }
 
+function HITAddAssignments(HITId, assignments, mtc) {
+  return mtc.createAdditionalAssignmentsForHIT({HITId: HITId,
+                                                NumberOfAdditionalAssignments: assignments
+                                               }).promise().then(function(data) {
+                                                 console.log(`Added ${assignments} to HIT ${HITId}`)
+                                               })
+}
+
+function addAssignments(creationData, assignments, endpoint) {
+  var mtc = getClient({endpoint: endpoint});
+  var isSingleMode = !_.isArray(creationData);
+  if (isSingleMode) {
+    return HITAddAssignments(creationData.HITId, assignments, mtc)
+  } else {
+    console.error('batch assignment adding not yet implemented')
+  }
+}
+
 function balance(endpoint) {
   var HITId = readCreationData(endpoint).HITId;
   var mtc = getClient({endpoint: endpoint});
@@ -457,6 +475,7 @@ module.exports = {
   create: create,
   download: download,
   addTime: addTime,
+  addAssignments: addAssignments,
   balance: balance,
   status: statusBatch
 }
