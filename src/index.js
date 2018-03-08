@@ -68,9 +68,16 @@ if (action == 'download') {
 
 if (action == 'add') {
   var argument = argv['_'].slice(1).join(' ')
-  var timeMatch = argument.match(/(\d+) (second|minute|day|hour|week|month)/g)
   var assignmentsMatch = argument.match(/(\d+) +(assignment)s?/)
 
+  // add assignments first so that if we're in batch mode and we add both assignments and time
+  // that new batches receive the time extension
+  if (assignmentsMatch) {
+    var numAssignments = parseInt(assignmentsMatch[1]);
+    methods.addAssignments(creationData, numAssignments, endpoint)
+  }
+
+  var timeMatch = argument.match(/(\d+) (second|minute|day|hour|week|month)/g)
   // handles mixing multiple units (e.g., 1 hour and 30 minutes)
   if (timeMatch) {
     var components = timeMatch.map(function(tm) { return tm.split(' ') })
@@ -80,8 +87,5 @@ if (action == 'add') {
     var seconds = _.sum(componentSeconds)
     methods.addTime(creationData, seconds, endpoint)
   }
-  if (assignmentsMatch) {
-    var numAssignments = parseInt(assignmentsMatch[1]);
-    methods.addAssignments(creationData, numAssignments, endpoint)
-  }
+
 }

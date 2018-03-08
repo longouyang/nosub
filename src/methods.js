@@ -424,34 +424,32 @@ function addTime(creationData, seconds, endpoint) {
   }
 }
 
-function HITAddAssignments(HITId, assignments, mtc) {
+function HITAddAssignments(HITId, numAssignments, mtc) {
   return mtc.createAdditionalAssignmentsForHIT({HITId: HITId,
-                                                NumberOfAdditionalAssignments: assignments
+                                                NumberOfAdditionalAssignments: numAssignments
                                                }).promise().then(function(data) {
-                                                 console.log(`Added ${assignments} assignments to HIT ${HITId}`)
+                                                 console.log(`Added ${numAssignments} assignments to HIT ${HITId}`)
                                                })
 }
 
 // testing: rm hit-ids.json; node ../src/index.js create --assignments 30 --duration "2 days"; gsleep 2s; node ../src/index.js add 29 assignments
-function addAssignments(creationData, assignments, endpoint) {
+function addAssignments(creationData, numAssignments, endpoint) {
   var mtc = getClient({endpoint: endpoint});
   var isSingleMode = !_.isArray(creationData);
   if (isSingleMode) {
-    return HITAddAssignments(creationData.HITId, assignments, mtc)
+    return HITAddAssignments(creationData.HITId, numAssignments, mtc)
   } else {
     // first find the hit that has fewer than 9 assignments (if one exists)
     // and top it up to 9
     var hits = _.map(creationData, 'HIT');
-    var topupHit = _.find(hits, function(h) {
-      return h.MaxAssignments < 9
-    })
-    var topUpAmount = 0;
 
+    var topupHit = _.find(hits, function(h) { return h.MaxAssignments < 9 })
+    var topUpAmount = 0;
     var promisors = [];
 
     if (topupHit) {
-      console.log(`topping up`, topupHit.HITId)
-      topUpAmount = 9 - topupHit.MaxAssignments;
+      // Math.min is needed because we might add fewer assignments than total
+      topUpAmount = Math.min(numAssignments, 9 - topupHit.MaxAssignments);
       promisors.push(
         function() {
           return HITAddAssignments(topupHit.HITId, topUpAmount, mtc)
@@ -464,7 +462,7 @@ function addAssignments(creationData, assignments, endpoint) {
     }
 
     // then create new batches of 9 and a spillover batch if necessary
-    var n = assignments - topUpAmount,
+    var n = numAssignments - topUpAmount,
         numBatches = Math.ceil(n / 9),
         batchSizes = _.map(_.range(numBatches),
                            function(i) {
@@ -472,20 +470,35 @@ function addAssignments(creationData, assignments, endpoint) {
                                (n % 9 == 0 ? 9 : n % 9)
                            });
 
-    promisors = promisors.concat(batchSizes.map(function(size, i) {
-      return function() {
-        return mtc.createHITWithHITType({
-          HITTypeId: creationData[0].HIT.HITTypeId,
-          MaxAssignments: size,
-          LifetimeInSeconds: "20000", // TODO
-          Question: creationData[0].HIT.Question
-        }).promise().then(function(data) {
-          console.log('Created batch ' + data.HIT.HITId)
-          return data
-        })
-      }
-    }))
+    var existingExpirations = _.map(hits, 'Expiration').map(function(exp) { return new Date(exp) })
+    var maxExistingExpiration = _.max(existingExpirations)
+    var secondsToMaxExistingExpiration = (maxExistingExpiration - Date.now()) / 1000
+    var newLifetimeInSeconds = Math.max(secondsToMaxExistingExpiration, 345600)
 
+    if (numBatches > 0) {
+      promisors.push(function() {
+        if (secondsToMaxExistingExpiration < 0) {
+          console.log('Creating new batches. Using a default expiration of 4 days')
+        } else {
+          console.log('Creating new batches. Setting expiration to current maximum ' + maxExistingExpiration)
+        }
+        return Promise.resolve([])
+      })
+
+      promisors = promisors.concat(batchSizes.map(function(size, i) {
+        return function() {
+          return mtc.createHITWithHITType({
+            HITTypeId: creationData[0].HIT.HITTypeId,
+            MaxAssignments: size,
+            LifetimeInSeconds: newLifetimeInSeconds, // TODO
+            Question: creationData[0].HIT.Question
+          }).promise().then(function(data) {
+            console.log('Created batch ' + data.HIT.HITId)
+            return data
+          })
+        }
+      }))
+    }
 
     SerialPromises2(promisors).then(function(modifiedHits) {
       var modifiedHitIds = _.map(modifiedHits, 'HIT.HITId'),
