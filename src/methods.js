@@ -195,9 +195,9 @@ function createBatch(turkParams, endpoint) {
               MaxAssignments: size,
               LifetimeInSeconds: turkParams.LifetimeInSeconds,
               Question: turkParams.Question
-            }).promise().then(function(dat) {
-              console.log(dat.HIT.HITId)
-              return dat
+            }).promise().then(function(data) {
+              console.log(data.HIT.HITId)
+              return data
             })
           }
         )
