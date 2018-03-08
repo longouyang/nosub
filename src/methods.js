@@ -5,28 +5,12 @@ var AWS = require('aws-sdk'),
     fs = require('fs'),
     convert = require('xml-js'),
     assert = require('assert'),
-    crypto = require('crypto');
+    crypto = require('crypto'),
+    promiseUtils = require('./promise-utils');
 
-// translated from https://hackernoon.com/functional-javascript-resolving-promises-sequentially-7aac18c4431e
-function SerialPromises(items, taskizer) {
-  return items.reduce(
-    function(acc, item) {
-      return acc.then(function(result) {
-        return taskizer(item).then(Array.prototype.concat.bind(result))
-      })
-    },
-    Promise.resolve([]))
-}
+var SerialPromises = promiseUtils.SerialPromises,
+    SerialPromises2 = promiseUtils.SerialPromises2;
 
-function SerialPromises2(promisors) {
-  return promisors.reduce(
-    function(acc, promisor) {
-      return acc.then(function(result) {
-        return promisor().then(Array.prototype.concat.bind(result))
-      })
-    },
-    Promise.resolve([]))
-}
 
 function readCreationData(endpoint) {
   var data = JSON.parse(fs.readFileSync('hit-ids.json'));
@@ -500,7 +484,7 @@ function addAssignments(creationData, numAssignments, endpoint) {
       }))
     }
 
-    SerialPromises2(promisors).then(function(modifiedHits) {
+    return SerialPromises2(promisors).then(function(modifiedHits) {
       var modifiedHitIds = _.map(modifiedHits, 'HIT.HITId'),
           unmodifiedHits = _.reject(creationData,
                                     function(x) {return _.includes(modifiedHitIds, x.HIT.HITId)})

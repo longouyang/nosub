@@ -4,7 +4,12 @@ var AWS = require('aws-sdk'),
     ask = require('./ask'),
     fs = require('fs'),
     convert = require('xml-js'),
-    methods = require('./methods');
+    methods = require('./methods'),
+    promiseUtils = require('./promise-utils');
+
+var SerialPromises = promiseUtils.SerialPromises,
+    SerialPromises2 = promiseUtils.SerialPromises2;
+
 
 AWS.config.update({region:'us-east-1'});
 
@@ -70,22 +75,29 @@ if (action == 'add') {
   var argument = argv['_'].slice(1).join(' ')
   var assignmentsMatch = argument.match(/(\d+) +(assignment)s?/)
 
+  var promisors = [];
+
   // add assignments first so that if we're in batch mode and we add both assignments and time
   // that new batches receive the time extension
   if (assignmentsMatch) {
-    var numAssignments = parseInt(assignmentsMatch[1]);
-    methods.addAssignments(creationData, numAssignments, endpoint)
+    promisors.push(function() {
+      var numAssignments = parseInt(assignmentsMatch[1]);
+      return methods.addAssignments(creationData, numAssignments, endpoint)
+    })
   }
 
   var timeMatch = argument.match(/(\d+) (second|minute|day|hour|week|month)/g)
   // handles mixing multiple units (e.g., 1 hour and 30 minutes)
   if (timeMatch) {
-    var components = timeMatch.map(function(tm) { return tm.split(' ') })
-    var componentSeconds = components.map(function(pair) {
-      return parseInt(pair[0]) * {second: 1, minute: 60, hour: 3600, day: 86400, week: 604800}[pair[1]];
+    promisors.push(function() {
+      var components = timeMatch.map(function(tm) { return tm.split(' ') })
+      var componentSeconds = components.map(function(pair) {
+        return parseInt(pair[0]) * {second: 1, minute: 60, hour: 3600, day: 86400, week: 604800}[pair[1]];
+      })
+      var seconds = _.sum(componentSeconds)
+      return methods.addTime(creationData, seconds, endpoint)
     })
-    var seconds = _.sum(componentSeconds)
-    methods.addTime(creationData, seconds, endpoint)
   }
 
+  SerialPromises2(promisors)
 }
