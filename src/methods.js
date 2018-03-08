@@ -6,11 +6,11 @@ var AWS = require('aws-sdk'),
     convert = require('xml-js'),
     assert = require('assert'),
     crypto = require('crypto'),
+    cTable = require('console.table'),
     promiseUtils = require('./promise-utils');
 
 var SerialPromises = promiseUtils.SerialPromises,
     SerialPromises2 = promiseUtils.SerialPromises2;
-
 
 function readCreationData(endpoint) {
   var data = JSON.parse(fs.readFileSync('hit-ids.json'));
@@ -517,26 +517,44 @@ function balance(endpoint) {
     })
 }
 
-// TODO: clean up output
-function statusSingle(HITId, endpoint) {
-//  var HITId = readCreationData(endpoint).HITId;
-
-  var mtc = getClient({endpoint: endpoint});
-
+function HITStatus(HITId, mtc) {
   return mtc
     .getHIT({HITId: HITId})
     .promise()
-    .then(function(data) {
-      console.log(data)
-    })
-    .catch(function(err) {
-      console.error(err)
+    .then(function(_h) {
+      var h = _h.HIT;
+      var created = new Date(h.CreationTime)
+      var expires = new Date(h.Expiration)
+      return {
+        ID: h.HITId,
+        Created: created.toLocaleDateString() + ' ' + created.toLocaleTimeString(),
+        Expiration: expires.toLocaleDateString() + ' ' + expires.toLocaleTimeString(),
+        Assignments: h.MaxAssignments,
+        NumPending: h.NumberOfAssignmentsPending,
+        NumAvailable: h.NumberOfAssignmentsAvailable,
+        NumCompleted: h.NumberOfAssignmentsCompleted
+      }
     })
 }
 
-function statusBatch(endpoint) {
-  var HITIds = _.map(readCreationData(endpoint), 'HIT.HITId')
-  SerialPromises(HITIds, function(HITId) { return statusSingle(HITId, endpoint)})
+function status(creationData, endpoint) {
+  var mtc = getClient({endpoint: endpoint});
+
+  var isSingleMode = !_.isArray(creationData);
+  if (isSingleMode) {
+    return HITStatus(creationData.HITId, mtc).then(function(metadata) {
+      console.table([metadata])
+    })
+  } else {
+    var HITIds = _.map(creationData, 'HIT.HITId')
+    return SerialPromises(HITIds, function(HITId) { return HITStatus(HITId, mtc) })
+      .then(function(metadata) {
+        console.table(_.sortBy(metadata, 'Expiration'))
+        console.log('Total available: ' + _.chain(metadata).map('Assignments').sum())
+        console.log('Total completed: ' + _.chain(metadata).map('NumCompleted').sum())
+      })
+  }
+
 }
 
 
@@ -546,5 +564,5 @@ module.exports = {
   addTime: addTime,
   addAssignments: addAssignments,
   balance: balance,
-  status: statusBatch
+  status: status
 }

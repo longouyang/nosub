@@ -59,7 +59,7 @@ if (action == 'balance') {
 // }
 
 if (action == 'status') {
-  methods.status(endpoint)
+  methods.status(creationData, endpoint)
 }
 
 if (action == 'download') {
