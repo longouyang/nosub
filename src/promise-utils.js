@@ -1,3 +1,5 @@
+// these helper functions serially chain promises
+
 // a promisor is a function that returns a promise
 function SerialPromises2(promisors) {
   return promisors.reduce(
