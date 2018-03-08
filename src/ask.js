@@ -9,7 +9,6 @@ function one(_opts) {
                          transform: function(x) { return x }
                         })
 
-  // TODO: detect control-D for exiting
   while(true) {
     var response = readlineSync.question(opts.message + '\n> ')
     if (opts.validate(response)) {
