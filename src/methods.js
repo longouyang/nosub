@@ -31,7 +31,7 @@ var getClient = function(opts) {
                   ? 'https://mturk-requester.us-east-1.amazonaws.com'
                   : 'https://mturk-requester-sandbox.us-east-1.amazonaws.com');
 
-  console.log('Running on ' + opts.endpoint);
+  console.log(`Running on ${opts.endpoint}`);
 
   return new AWS.MTurk(
     {apiVersion: '2017-01-17',
@@ -176,7 +176,7 @@ function createBatch(turkParams, endpoint) {
 
   mtc.createHITType(_.omit(turkParams, 'LifetimeInSeconds', 'Question', 'MaxAssignments')).promise()
     .then(function(data) {
-      console.log('Created HIT Type ' + data.HITTypeId)
+      console.log(`Created HIT Type ${data.HITTypeId}`)
 
       var n = parseInt(turkParams.MaxAssignments),
           numBatches = Math.ceil(n / 9),
@@ -234,7 +234,7 @@ function createSingle(turkParams, endpoint) {
                                                existingHitIds,
                                                _.fromPairs([[endpoint, hit]]))))
 
-      console.log('Created HIT ' + hit.HITId)
+      console.log(`Created HIT ${hit.HITId}`)
       // TODO: add preview link
     })
     .catch(function(err) {
@@ -374,7 +374,7 @@ function HITAddTime(HITId, seconds, mtc) {
     })
     .then(function(data) {
       // aws returns an empty response, so ignore data argument
-      console.log('New expiration is ' + newDate.toString())
+      console.log(`New expiration is ${newDate.toString()}`)
     })
     .catch(function(err) {
       console.log(err)
@@ -462,9 +462,9 @@ function addAssignments(creationData, numAssignments, endpoint) {
     if (numBatches > 0) {
       promisors.push(function() {
         if (secondsToMaxExistingExpiration < 0) {
-          console.log('Creating new batches. Using a default expiration of 4 days')
+          console.log(`Creating new batches. Using a default expiration of 4 days`)
         } else {
-          console.log('Creating new batches. Setting expiration to current maximum ' + maxExistingExpiration)
+          console.log(`Creating new batches. Setting expiration to current maximum ${maxExistingExpiration}`)
         }
         return Promise.resolve([])
       })
@@ -477,7 +477,7 @@ function addAssignments(creationData, numAssignments, endpoint) {
             LifetimeInSeconds: newLifetimeInSeconds,
             Question: creationData[0].HIT.Question
           }).promise().then(function(data) {
-            console.log('Created batch ' + data.HIT.HITId)
+            console.log(`Created batch ${data.HIT.HITId}`)
             return data
           })
         }
@@ -550,8 +550,11 @@ function status(creationData, endpoint) {
     return SerialPromises(HITIds, function(HITId) { return HITStatus(HITId, mtc) })
       .then(function(metadata) {
         console.table(_.sortBy(metadata, 'Expiration'))
-        console.log('Total available: ' + _.chain(metadata).map('Assignments').sum())
-        console.log('Total completed: ' + _.chain(metadata).map('NumCompleted').sum())
+        var totalAvailable = _.chain(metadata).map('Assignments').sum().value()
+        var totalCompleted = _.chain(metadata).map('NumCompleted').sum().value()
+
+        console.log(`Total available: ${totalAvailable}`)
+        console.log(`Total completed: ${totalCompleted}`)
       })
   }
 
