@@ -474,7 +474,7 @@ function addAssignments(creationData, numAssignments, endpoint) {
           return mtc.createHITWithHITType({
             HITTypeId: creationData[0].HIT.HITTypeId,
             MaxAssignments: size,
-            LifetimeInSeconds: newLifetimeInSeconds, // TODO
+            LifetimeInSeconds: newLifetimeInSeconds,
             Question: creationData[0].HIT.Question
           }).promise().then(function(data) {
             console.log('Created batch ' + data.HIT.HITId)
