@@ -10,7 +10,7 @@
   "bin" : { "node-cosub" : "./src/index.js" },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/longouyang/cosub.git"
+    "url": "git+https://github.com/longouyang/node-cosub.git"
   },
   "keywords": [
     "mturk",
@@ -19,9 +19,9 @@
   "author": "Long Ouyang",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/longouyang/cosub/issues"
+    "url": "https://github.com/longouyang/node-cosub/issues"
   },
-  "homepage": "https://github.com/longouyang/cosub#readme",
+  "homepage": "https://github.com/longouyang/node-cosub#readme",
   "dependencies": {
     "aws-sdk": "^2.181.0",
     "console.table": "^0.10.0",
