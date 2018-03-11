@@ -5,7 +5,7 @@
   "main": "src/index.js",
   "scripts": {
       "test": "echo \"Error: no test specified\" && exit 1",
-      "node-cosub": "./src/index.js"
+      "node-cosub": "node-cosub"
   },
   "bin" : { "node-cosub" : "./src/index.js" },
   "repository": {
