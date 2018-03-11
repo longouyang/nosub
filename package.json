@@ -1,11 +1,12 @@
 {
-  "name": "cosub",
+  "name": "node-cosub",
   "version": "0.0.1",
   "description": "Manages external HITs on Amazon MTurk",
   "main": "src/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "bin" : { "node-cosub" : "./src/index.js" },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/longouyang/cosub.git"
