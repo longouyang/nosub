@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 var AWS = require('aws-sdk'),
     _ = require('lodash'),
     minimist = require('minimist'),

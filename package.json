@@ -4,7 +4,8 @@
   "description": "Manages external HITs on Amazon MTurk",
   "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+      "test": "echo \"Error: no test specified\" && exit 1",
+      "node-cosub": "./src/index.js"
   },
   "bin" : { "node-cosub" : "./src/index.js" },
   "repository": {
