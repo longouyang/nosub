@@ -1,27 +1,27 @@
 {
-  "name": "node-cosub",
+  "name": "nosub",
   "version": "0.0.1",
   "description": "Manages external HITs on Amazon MTurk",
   "main": "src/index.js",
   "scripts": {
       "test": "echo \"Error: no test specified\" && exit 1",
-      "node-cosub": "node-cosub"
+      "nosub": "nosub"
   },
-  "bin" : { "node-cosub" : "./src/index.js" },
+  "bin" : { "nosub" : "./src/index.js" },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/longouyang/node-cosub.git"
+    "url": "git+https://github.com/longouyang/nosub.git"
   },
   "keywords": [
     "mturk",
-    "cosub"
+    "nosub"
   ],
   "author": "Long Ouyang",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/longouyang/node-cosub/issues"
+    "url": "https://github.com/longouyang/nosub/issues"
   },
-  "homepage": "https://github.com/longouyang/node-cosub#readme",
+  "homepage": "https://github.com/longouyang/nosub#readme",
   "dependencies": {
     "aws-sdk": "^2.181.0",
     "console.table": "^0.10.0",

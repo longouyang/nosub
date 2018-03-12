@@ -1,4 +1,4 @@
-# node-cosub
+# nosub
 
 A command-line tool for managing external HITs on Amazon's Mechanical Turk.
 
@@ -14,13 +14,13 @@ Node version 4 or higher.
 
 ## Installation
 
-You can install node-cosub either globally (across your entire system) or locally (on a per project basis).
+You can install nosub either globally (across your entire system) or locally (on a per project basis).
 The global install is a little more convenient, although the local install facilitates greater reproducibility.
 
 ## Global installation
 
 ```
-sudo npm install -g longouyang/node-cosub
+sudo npm install -g longouyang/nosub
 ```
 
 # Usage
@@ -35,23 +35,23 @@ aws_secret_access_key = <SECRET ACCESS KEY>
 
 Next, go to a folder where you want to store your settings and results for a single HIT.
 
-Now, run `cosub init`.
+Now, run `nosub init`.
 This will step you through creating your HIT.
 After init, you can perform these actions:
 
 ```
-cosub create   # create hit based on settings in settings.json
-cosub update   # update hit based on settings in settings.json
-cosub add <N> assignments
-cosub add <N> {days/hours/minutes}
-cosub expire   # expire hit
-cosub download # download results to sandbox-results/ or production-results/
-cosub status   # summarize HIT (settings, time left, # assignments, ...)
-cosub history  # show history of cosub actions
-cosub balance  # get mturk balance
+nosub create   # create hit based on settings in settings.json
+nosub update   # update hit based on settings in settings.json
+nosub add <N> assignments
+nosub add <N> {days/hours/minutes}
+nosub expire   # expire hit
+nosub download # download results to sandbox-results/ or production-results/
+nosub status   # summarize HIT (settings, time left, # assignments, ...)
+nosub history  # show history of nosub actions
+nosub balance  # get mturk balance
 ```
 
-By default, actions take place on the sandbox. You can run actions in production mode by adding '-p' after cosub, e.g., cosub -p create creates the HIT on the production site rather than the sandbox.
+By default, actions take place on the sandbox. You can run actions in production mode by adding '-p' after nosub, e.g., nosub -p create creates the HIT on the production site rather than the sandbox.
 
 DISCUSS BATCH MODE
 
@@ -66,10 +66,10 @@ Is this a thing?
 You can also combine adding assignments and time:
 
 ```
-cosub add 40 assignments and 3 hours
+nosub add 40 assignments and 3 hours
 ```
 
-In batch mode, 
+In batch mode,
 
 #### `download`
 
