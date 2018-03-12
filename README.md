@@ -23,17 +23,6 @@ The global install is a little more convenient, although the local install facil
 sudo npm install -g longouyang/node-cosub
 ```
 
-## Local installation
-
-```
-npm install --save longouyang/node-cosub@<VERSION>
-```
-
-For reproducibility, replace `<VERSION>` with a version number or a git commit hash.
-
-Local install: running binary works a little differently?
-
-
 # Usage
 
 First, place your AWS authentication credentials in `~/.aws/credentials` in this format:
