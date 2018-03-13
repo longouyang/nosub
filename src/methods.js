@@ -126,24 +126,28 @@ function init(opts) {
     },
     {name: "Reward",
      message: 'How much you will pay each worker (in dollars)?',
-     validate: function(x) {
+     validate: function(_x) {
+       // if value comes from command line args, it'll be a number, not a string
+       var x = _x + '';
        return _.isNumber(parseFloat(x.replace('$',''))) ? true : 'Reward must be a number'
      },
      // NB: not transformed to a string, only strip currency indicator
-     transform: function(x) {
+     transform: function(_x) {
+       var x = _x + '';
        return x.replace('$','')
      }
     },
     // TODO: qualifications
   ];
 
-  var questionsPartitioned = _.partition(allQuestions,
-                                         function(q) {
-                                           return _.has(opts, q.name) &&
-                                             (!_.has(q, 'validate') || q.validate(opts[q.name]))
-                                         }),
-      answeredQuestions = questionsPartitioned[0],
-      unansweredQuestions = questionsPartitioned[1];
+  var questionsPartitioned = _.partition(
+    allQuestions,
+    function(q) {
+      return _.has(opts, q.name) &&
+        (!_.has(q, 'validate') || q.validate(opts[q.name]) === true)
+    })
+  var answeredQuestions = questionsPartitioned[0];
+  var unansweredQuestions = questionsPartitioned[1];
 
   var noninteractiveAnswers = _.chain(answeredQuestions)
       .map(function(q) { return [q.name,
@@ -187,8 +191,7 @@ function create(opts) {
     {
       name: 'duration',
       message: ['How long do you want to run the HIT?',
-                'You can give an answer in seconds, minutes, hours, days, or weeks.',
-                '(You can always add more time using cosub add)'].join('\n'),
+                'You can answer in seconds, minutes, hours, days, or weeks and you can always add more time using nosub add.'].join('\n'),
       validate: function(x) {
         return validateDuration(x) ? true : 'Invalid duration'
       },
@@ -198,12 +201,14 @@ function create(opts) {
     }
   ];
 
-  var questionsPartitioned = _.partition(allQuestions,
-                                         function(q) {
-                                           return _.has(opts, q.name) && q.validate(opts[q.name])
-                                         }),
-      answeredQuestions = questionsPartitioned[0],
-      unansweredQuestions = questionsPartitioned[1];
+  var questionsPartitioned = _.partition(
+    allQuestions,
+    function(q) {
+      return _.has(opts, q.name) &&
+        (!_.has(q, 'validate') || q.validate(opts[q.name]) === true)
+    })
+  var answeredQuestions = questionsPartitioned[0];
+  var unansweredQuestions = questionsPartitioned[1];
 
   var noninteractiveAnswers = _.chain(answeredQuestions)
       .map(function(q) { return [q.name, q.transform(opts[q.name])] })
@@ -213,8 +218,6 @@ function create(opts) {
   var interactiveAnswers = _.fromPairs(ask.many(unansweredQuestions));
 
   var answers = _.extend({},noninteractiveAnswers, interactiveAnswers);
-
-  // transform anything passed in via command line
 
   var externalQuestion =
       `<ExternalQuestion xmlns="http://mechanicalturk.amazonaws.com/AWSMechanicalTurkDataSchemas/2006-07-14/ExternalQuestion.xsd">
