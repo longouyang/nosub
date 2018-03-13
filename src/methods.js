@@ -64,6 +64,13 @@ function init(opts) {
         if (x.length == 0) return false
         if (x.indexOf('http://') > -1) return 'http URLs are not allowed; use https'
         return true
+      },
+      transform: function(x) {
+        if (x.indexOf('https://') == 0) {
+          return x
+        } else {
+          return 'https://' + x
+        }
       }
     },
     {
