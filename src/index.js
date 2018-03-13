@@ -55,10 +55,6 @@ if (action == 'balance') {
   methods.balance(endpoint)
 }
 
-// if (action == 'init') {
-//   init()
-// }
-
 if (action == 'status') {
   methods.status(creationData, endpoint)
 }
@@ -101,4 +97,12 @@ if (action == 'add') {
   }
 
   SerialPromises2(promisors)
+}
+
+if (action == 'expire') {
+  methods.expire(creationData, endpoint)
+}
+
+if (action == 'init') {
+  methods.init(argv, endpoint)
 }

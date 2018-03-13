@@ -39,24 +39,122 @@ var getClient = function(opts) {
     });
 }
 
+var unitsToSeconds = {second: 1, minute: 60, hour: 3600, day: 86400, week: 604800};
+
+// converts a string input to a number of seconds
+function extractDuration(x) {
+  var match = /(\d+)\s*(second|minute|hour|day|week)/.exec(x);
+  var numUnits = parseFloat(match[1]),
+      unit = match[2];
+
+  return numUnits * unitsToSeconds[unit];
+}
+
+function validateDuration(x) {
+  return /\d+\s*(second|minute|hour|day|week)s?/.test(x)
+}
+
+
+function init(opts) {
+  var allQuestions = [
+    {
+      name: 'Url',
+      message: 'What is your task URL?',
+      validate: function(x) {
+        if (x.length == 0) return false
+        if (x.indexOf('http://') > -1) return 'http URLs are not allowed; use https'
+        return true
+      }
+    },
+    {
+      name: 'Title',
+      message: 'What is the title of your HIT?',
+      validate: function(x) {
+        return x.length > 0
+      }
+    },
+    {
+      name: 'Description',
+      message: 'What is the description of your HIT?',
+      validate: function(x) {
+        return x.length > 0
+      }
+    },
+    {
+      name: 'Keywords',
+      message: 'Provide some keywords for the HIT:',
+      validate: function(x) {
+        return x.length > 0
+      }
+    },
+    {
+      name: 'Batch',
+      message: 'Do you want to run in (b)atch or (s)ingle mode?',
+      validate: function(x) {
+        return ('batch'.indexOf(x) > -1 || 'single'.indexOf(x) > -1) ? true : 'Type b for batch and s for single'
+      },
+      transform: function(x) {
+        return 'batch'.indexOf(x) > -1 ? true : false
+      }
+    },
+    {
+      name: 'FrameHeight',
+      message: 'What frame height do you want?',
+      validate: function(x) {
+        return _.isInteger(parseInt(x)) ? true : 'Height must be an integer'
+      },
+      transform: function(x) {
+        return parseInt(x)
+      }
+    },
+    {name: "AssignmentDuration",
+     message: "How long will a worker have to complete your HIT?\nYou can answer in seconds, minutes, hours, days, or weeks.",
+     validate: validateDuration
+     // NB: not transformed
+    },
+    {name: "AutoApprovalDelay",
+     message: 'After how long should unreviewed assignments be automatically approved?\nYou can answer in seconds, minutes, hours, days, or weeks.',
+     validate: validateDuration
+     // NB: not transformed
+    },
+    {name: "Reward",
+     message: 'How much you will pay each worker (in dollars)?',
+     validate: function(x) {
+       return _.isNumber(parseFloat(x.replace('$',''))) ? true : 'Reward must be a number'
+     },
+     // NB: not transformed to a string, only strip currency indicator
+     transform: function(x) {
+       return x.replace('$','')
+     }
+    },
+    // TODO: qualifications
+  ];
+
+  var questionsPartitioned = _.partition(allQuestions,
+                                         function(q) {
+                                           return _.has(opts, q.name) &&
+                                             (!_.has(q, 'validate') || q.validate(opts[q.name]))
+                                         }),
+      answeredQuestions = questionsPartitioned[0],
+      unansweredQuestions = questionsPartitioned[1];
+
+  var noninteractiveAnswers = _.chain(answeredQuestions)
+      .map(function(q) { return [q.name,
+                                 (!_.has(q, 'transform')
+                                  ? opts[q.name] :
+                                  q.transform(opts[q.name]))] })
+      .fromPairs()
+      .value();
+
+  var interactiveAnswers = _.fromPairs(ask.many(unansweredQuestions));
+  var answers = _.extend({"_cosubSpecVersion":2},noninteractiveAnswers, interactiveAnswers);
+  fs.writeFileSync('settings.json', JSON.stringify(answers, null, 1))
+  console.log('Wrote to settings.json')
+}
+
 // TODO? in addition to command-line and stdin interfaces, also allow programmatic access
 function create(opts) {
   // TODO: if we already created this hit (in non-batch-mode, don't allow cosub create)
-
-  var unitsToSeconds = {second: 1, minute: 60, hour: 3600, day: 86400, week: 604800};
-
-  // converts a string input to a number of seconds
-  function extractDuration(x) {
-    var match = /(\d+)\s*(second|minute|hour|day|week)/.exec(x);
-    var numUnits = parseFloat(match[1]),
-        unit = match[2];
-
-    return numUnits * unitsToSeconds[unit];
-  }
-
-  function validateDuration(x) {
-    return /\d+\s*(second|minute|hour|day|week)s?/.test(x)
-  }
 
   var allQuestions = [
     {
@@ -73,7 +171,7 @@ function create(opts) {
       name: 'assignments',
       message: 'How many assignments do you want to run?',
       validate: function(x) {
-        return _.isInteger(x) ? true : 'Answer must be a number'
+        return _.isInteger(parseInt(x)) ? true : 'Answer must be a number'
       },
       transform: function(x) {
         return parseInt(x)
@@ -560,6 +658,29 @@ function status(creationData, endpoint) {
 
 }
 
+function HITExpire(HITId, mtc) {
+  return mtc.updateExpirationForHIT({HITId: HITId,
+                                     ExpireAt: new Date
+                                    }).promise()
+}
+
+function expire(creationData, endpoint) {
+  var mtc = getClient({endpoint: endpoint});
+
+  var isSingleMode = !_.isArray(creationData);
+  if (isSingleMode) {
+    return HITExpire(creationData.HITId, mtc).then(function(dat) {
+      console.log('Expired HIT')
+    })
+  } else {
+    var HITIds = _.map(creationData, 'HIT.HITId')
+    return SerialPromises2(HITIds.map(function(HITId) { return function() { return HITExpire(HITId, mtc)} })).then(function(dat) {
+      console.log('Expired HITs')
+    })
+  }
+
+}
+
 
 module.exports = {
   create: create,
@@ -567,5 +688,7 @@ module.exports = {
   addTime: addTime,
   addAssignments: addAssignments,
   balance: balance,
-  status: status
+  status: status,
+  expire: expire,
+  init: init
 }

@@ -5,16 +5,18 @@ function one(_opts) {
   var opts = _.defaults(_opts || {},
                         {message: '',
                          validate: function() { return true },
-                         invalidMessage: 'Invalid input',
                          transform: function(x) { return x }
                         })
 
   while(true) {
     var response = readlineSync.question(opts.message + '\n> ')
-    if (opts.validate(response)) {
+    var validatorValue = opts.validate(response)
+    if (validatorValue === true) {
       return [opts.name, opts.transform(response)]
+    } else if (validatorValue === false) {
+      console.log('Invalid input')
     } else {
-      console.log(opts.invalidMessage)
+      console.log(validatorValue)
     }
   }
 }
