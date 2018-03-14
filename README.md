@@ -75,7 +75,6 @@ After initializing, you can do these management actions.
 
 ```
 nosub create   # create hit based on settings in settings.json
-nosub update   # update hit based on settings in settings.json
 nosub add <N> assignments
 nosub add <N> {days/hours/minutes}
 nosub expire   # expire hit
@@ -87,7 +86,7 @@ nosub balance  # get mturk balance
 
 By default, actions take place on the sandbox. You can run actions in production mode by adding '-p' after nosub, e.g., nosub -p create creates the HIT on the production site rather than the sandbox.
 
-(todo: not yet implemented: `history`, `update`, `qualifications`)
+(todo: not yet implemented: `history`)
 
 ### `create`
 
