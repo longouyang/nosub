@@ -103,6 +103,9 @@ In batch mode,
 
 ### `download`
 
+note: worker ids are anonymized by default.
+the anonymization is deterministic (md5 hash of your requester id concatenated with the worker's id), which allows you to check whether a worker performed this HIT multiple times or also performed a different HIT of yours in the past.
+
 ### `status`
 
 ### `balance`
