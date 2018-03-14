@@ -136,8 +136,7 @@ function init(opts) {
        var x = _x + '';
        return x.replace('$','')
      }
-    },
-    // TODO: qualifications
+    }
   ];
 
   var questionsPartitioned = _.partition(
