@@ -1,18 +1,10 @@
 # nosub
 
-A command-line tool for managing external HITs on Amazon's Mechanical Turk.
-
-## Philosophy
-
-Many behavioral scientists use a Mechanical Turk workflow where they create a single External HIT with many assignments.
-This corresponds to a single experiment with many participants.
-The same HIT is often repurposed for multiple versions of the same experiment, so there's a need for a HIT management tool that facilitates multiple rounds of data collection and updating.
-
-## Requirements
-
-Node.js version 4 or higher.
+A command-line tool for creating managing external HITs on Amazon's Mechanical Turk.
 
 ## Installation
+
+nosub requires [Node.js](https://nodejs.org) version 4 or higher.
 
 ```
 sudo npm install -g longouyang/nosub
