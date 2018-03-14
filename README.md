@@ -1,6 +1,6 @@
 # nosub
 
-A command-line tool for creating managing external HITs on Amazon's Mechanical Turk.
+A command-line tool for creating and managing external HITs on Amazon's Mechanical Turk.
 
 ## Installation
 
