@@ -7,7 +7,8 @@ var AWS = require('aws-sdk'),
     assert = require('assert'),
     crypto = require('crypto'),
     cTable = require('console.table'),
-    promiseUtils = require('./promise-utils');
+    promiseUtils = require('./promise-utils'),
+    quals = require('./quals');
 
 var SerialPromises = promiseUtils.SerialPromises,
     SerialPromises2 = promiseUtils.SerialPromises2;
@@ -31,7 +32,9 @@ var getClient = function(opts) {
                   ? 'https://mturk-requester.us-east-1.amazonaws.com'
                   : 'https://mturk-requester-sandbox.us-east-1.amazonaws.com');
 
-  console.log(`Running on ${opts.endpoint}`);
+  if (!opts.quiet) {
+    console.log(`Running on ${opts.endpoint}`);
+  }
 
   return new AWS.MTurk(
     {apiVersion: '2017-01-17',
@@ -55,6 +58,8 @@ function validateDuration(x) {
 }
 
 
+// testing qualification entry:
+// node ../src/index.js init --Url foo.com --Title bar --Description baz --Keywords qux --Batch s --FrameHeight 450 --AssignmentDuration '45 minutes' --AutoApprovalDelay '5 minutes' --Reward 0.75
 function init(opts) {
   var allQuestions = [
     {
@@ -119,6 +124,7 @@ function init(opts) {
      validate: validateDuration
      // NB: not transformed
     },
+    // TODO: enter Infinity for no AutoApprovalDelay
     {name: "AutoApprovalDelay",
      message: 'After how long should unreviewed assignments be automatically approved?\nYou can answer in seconds, minutes, hours, days, or weeks.',
      validate: validateDuration
@@ -158,6 +164,11 @@ function init(opts) {
 
   var interactiveAnswers = _.fromPairs(ask.many(unansweredQuestions));
   var answers = _.extend({"_cosubSpecVersion":2},noninteractiveAnswers, interactiveAnswers);
+
+  var qrs = quals.ask();
+  _.extend(answers, {QualificationRequirements: qrs})
+  // TODO: read qualifications string from noninteractive specification (use & as a delimiter)
+
   fs.writeFileSync('settings.json', JSON.stringify(answers, null, 1))
   console.log('Wrote to settings.json')
 }
@@ -165,6 +176,10 @@ function init(opts) {
 // TODO? in addition to command-line and stdin interfaces, also allow programmatic access
 function create(opts) {
   // TODO: if we already created this hit (in non-batch-mode, don't allow cosub create)
+  if (readCreationData(opts.endpoint)) {
+    console.error(`You've already uploaded this HIT to ${opts.endpoint}`)
+    process.exit()
+  }
 
   var allQuestions = [
     {
@@ -239,8 +254,12 @@ function create(opts) {
   }
 
   function renameOldKeys(dict) {
-    var oldKeys = _.keys(dict),
-    newKeys = _.map(oldKeys, renameOldKey),
+    var oldKeys = _.keys(dict);
+    // if we end up calling this on, say, a number, string, or boolean, just return the value
+    if (oldKeys.length == 0) {
+      return dict
+    }
+    var newKeys = _.map(oldKeys, renameOldKey),
     oldValues = _.values(dict),
     newValues = _.map(oldValues,
                       function(v) {
@@ -260,13 +279,60 @@ function create(opts) {
   turkParams.AutoApprovalDelayInSeconds = extractDuration(turkParams.AutoApprovalDelayInSeconds)
   turkParams.Reward = turkParams.Reward + ""
 
-  // TODO: handle qualification requirements
+  var endpoint = answers.endpoint;
+  var mtc = getClient({endpoint: endpoint, quiet: true})
+  // name to id mapping depends on endpoint
+  var qualNamesToIds = quals.namesToIds[endpoint];
 
-  if (allParams.Batch) {
-    createBatch(turkParams, answers.endpoint)
-  } else {
-    createSingle(turkParams, answers.endpoint)
-  }
+  // look up qualification ids from qualification names
+  // TODO: handle pagination
+  SerialPromises(turkParams.QualificationRequirements,
+                 function(qr) {
+                   if (_.includes(quals.systemQualNames, qr.Name)) {
+                     var ret = _.chain(qr)
+                         .omit('Name')
+                         .extend({QualificationTypeId: qualNamesToIds[qr.Name]})
+                         .value()
+                     return Promise.resolve(ret)
+                   } else {
+                     return mtc.listQualificationTypes({
+                       MustBeRequestable: false,
+                       MustBeOwnedByCaller: true
+                     }).promise().then(function(data) {
+                       var serverQuals = data.QualificationTypes;
+                       var matchingServerQual = _.find(serverQuals,
+                                                       function(sq) {
+                                                         return sq.Name == qr.Name
+                                                       })
+                       if (matchingServerQual) {
+                         return _.chain(qr)
+                           .omit('Name')
+                           .extend({QualificationTypeId: matchingServerQual.QualificationTypeId})
+                           .value()
+                       } else {
+                         var foundServerNames = _.map(serverQuals, 'Name')
+                         console.error(`Error: No custom qualification with name ${qr.Name} found on ${endpoint}`)
+                         console.error(`(Names found on server: ${foundServerNames.join(', ')})`)
+                         process.exit()
+                       }
+                     })
+                   }
+                 }).then(
+                   function(quals) {
+                     turkParams.QualificationRequirements = quals;
+
+                     if (allParams.Batch) {
+                       createBatch(turkParams, endpoint)
+                     } else {
+                       createSingle(turkParams, endpoint)
+                     }
+                   }
+                 )
+
+
+
+
+
 
 }
 
@@ -277,8 +343,7 @@ function delay(t, v) {
 }
 
 function createBatch(turkParams, endpoint) {
-  var mtc = getClient({endpoint: endpoint});
-
+  var mtc = getClient({endpoint: endpoint})
   var metadata = {};
 
   mtc.createHITType(_.omit(turkParams, 'LifetimeInSeconds', 'Question', 'MaxAssignments')).promise()
@@ -329,7 +394,7 @@ function createBatch(turkParams, endpoint) {
 }
 
 function createSingle(turkParams, endpoint) {
-  var mtc = getClient({endpoint: endpoint});
+  var mtc = getClient({endpoint: endpoint})
 
   mtc.createHIT(turkParams).promise()
     .then(function(data) {

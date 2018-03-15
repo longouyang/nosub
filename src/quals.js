@@ -13,6 +13,23 @@ var systemQualNames = ['Masters',
                        'Worker_Adult',
                        'Worker_PercentAssignmentsApproved']
 
+var qualNamesToIds = {
+  production: {
+    Masters: '2F1QJWKUDD8XADTFD2Q0G6UTO95ALH',
+    Worker_NumberHITsApproved: '00000000000000000040',
+    Worker_Locale: '00000000000000000071',
+    Worker_Adult: '00000000000000000060',
+    Worker_PercentAssignmentsApproved: '000000000000000000L0'
+  },
+  sandbox: {
+    Masters: '2ARFPLSP75KLA8M8DH1HTEQVJT3SY6',
+    Worker_NumberHITsApproved: '00000000000000000040',
+    Worker_Locale: '00000000000000000071',
+    Worker_Adult: '00000000000000000060',
+    Worker_PercentAssignmentsApproved: '000000000000000000L0'
+  }
+}
+
 var comparators = ['=',
                    '!=',
                    '<',
@@ -64,7 +81,7 @@ function validateAndTransformLocale(str) {
   }
 
   return {
-    Country: country,
+    Country: countryData.c2,
     Subdivision: subdivision
   }
 
@@ -111,7 +128,7 @@ function validateAndTransformFormula(str) {
     throw new Error('For Worker_Adult qualification, specify either:\nWorker_Adult = 1 (for adults)\nWorker_Adult = 0 (for children)')
   }
 
-  var ret = {QualificationName: name,
+  var ret = {Name: name,
              Comparator: comparatorTransforms[comp]}
   if (!_.isUndefined(value)) {
 
@@ -144,8 +161,8 @@ function formulaHelp() {
   console.log('Value can be:')
   console.log(' a single integer: 5')
   console.log(' a list of integers: 5, 7, 23, 8')
-  console.log(' a single location (ISO-3066 country code with optional ISO 3166-2 subdivision): USA:NY')
-  console.log(' a list of locations: USA:NY, MEX, CAN')
+  console.log(' a single location (ISO-3066 country code with optional ISO 3166-2 subdivision): US:NY')
+  console.log(' a list of locations: US:NY, MEX, CAN')
   console.log('')
 }
 
@@ -185,8 +202,11 @@ var askQual = function(message) {
   }
 }
 
-
-console.log(JSON.stringify(askQual()))
+module.exports = {
+  ask: askQual,
+  systemQualNames: systemQualNames,
+  namesToIds: qualNamesToIds
+}
 
 //formulaHelp()
 
