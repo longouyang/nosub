@@ -62,7 +62,7 @@ Note that if you choose to use batch mode, you may want to implement some way of
 After initializing, you can do these management actions.
 
 ```
-nosub create   # create hit based on settings in settings.json
+nosub upload   # send HIT settings to mturk
 nosub add <N> assignments
 nosub add <N> {days/hours/minutes}
 nosub expire   # expire hit
@@ -72,12 +72,11 @@ nosub history  # show history of nosub actions
 nosub balance  # get mturk balance
 ```
 
-By default, actions take place on the sandbox. You can run actions in production mode by adding '-p' after nosub, e.g., nosub -p create creates the HIT on the production site rather than the sandbox.
+By default, actions take place on the sandbox. You can run actions in production mode by adding '-p' after nosub, e.g., `nosub -p upload` uploads the HIT to the production site rather than the sandbox.
 
 (todo: not yet implemented: `history`)
 
-### `create`
-
+### `upload`
 
 ### `add`
 
@@ -87,7 +86,7 @@ You can also combine adding assignments and time:
 nosub add 40 assignments and 3 hours
 ```
 
-In batch mode,
+todo: in batch mode, assignments are added by creating new batches. time is added only to unfinished batches.
 
 ### `download`
 

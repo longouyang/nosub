@@ -174,11 +174,14 @@ function init(opts) {
 }
 
 // TODO? in addition to command-line and stdin interfaces, also allow programmatic access
-function create(opts) {
-  // TODO: if we already created this hit (in non-batch-mode, don't allow cosub create)
-  if (readCreationData(opts.endpoint)) {
+function upload(opts) {
+  // TODO: there's a better way to write this
+  try {
+    readCreationData(opts.endpoint)
     console.error(`You've already uploaded this HIT to ${opts.endpoint}`)
     process.exit()
+  } catch(e) {
+
   }
 
   var allQuestions = [
@@ -322,9 +325,9 @@ function create(opts) {
                      turkParams.QualificationRequirements = quals;
 
                      if (allParams.Batch) {
-                       createBatch(turkParams, endpoint)
+                       uploadBatch(turkParams, endpoint)
                      } else {
-                       createSingle(turkParams, endpoint)
+                       uploadSingle(turkParams, endpoint)
                      }
                    }
                  )
@@ -342,9 +345,11 @@ function delay(t, v) {
   });
 }
 
-function createBatch(turkParams, endpoint) {
+function uploadBatch(turkParams, endpoint) {
   var mtc = getClient({endpoint: endpoint})
   var metadata = {};
+
+  var domain = endpoint == 'sandbox' ? 'workersandbox.mturk.com' : 'worker.mturk.com';
 
   mtc.createHITType(_.omit(turkParams, 'LifetimeInSeconds', 'Question', 'MaxAssignments')).promise()
     .then(function(data) {
@@ -358,7 +363,7 @@ function createBatch(turkParams, endpoint) {
                                  (n % 9 == 0 ? 9 : n % 9)
                              })
 
-      console.log('Created HITs:');
+      console.log('Uploaded HITs:');
       return SerialPromises(batchSizes, function(size) {
         return delay(500).then(
           function() {
@@ -369,6 +374,8 @@ function createBatch(turkParams, endpoint) {
               Question: turkParams.Question
             }).promise().then(function(data) {
               console.log(data.HIT.HITId)
+              console.log(`- Preview link: https://${domain}/mturk/preview?groupId=${data.HIT.HITGroupId}`)
+
               return data
             })
           }
@@ -393,7 +400,7 @@ function createBatch(turkParams, endpoint) {
     })
 }
 
-function createSingle(turkParams, endpoint) {
+function uploadSingle(turkParams, endpoint) {
   var mtc = getClient({endpoint: endpoint})
 
   mtc.createHIT(turkParams).promise()
@@ -406,8 +413,9 @@ function createSingle(turkParams, endpoint) {
                                                existingHitIds,
                                                _.fromPairs([[endpoint, hit]]))))
 
-      console.log(`Created HIT ${hit.HITId}`)
-      // TODO: add preview link
+      var domain = endpoint == 'sandbox' ? 'workersandbox.mturk.com' : 'worker.mturk.com'
+      console.log(`Uploaded. HIT ID is ${hit.HITId}`)
+      console.log(`Preview link: https://${domain}/mturk/preview?groupId=${data.HIT.HITGroupId}`)
     })
     .catch(function(err) {
       console.log('Error creating HIT')
@@ -757,7 +765,7 @@ function expire(creationData, endpoint) {
 
 
 module.exports = {
-  create: create,
+  upload: upload,
   download: download,
   addTime: addTime,
   addAssignments: addAssignments,

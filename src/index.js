@@ -40,7 +40,7 @@ try {
 
 
 // TODO: move this logic inside the method
-if (action == 'create') {
+if (action == 'upload') {
   // TODO: if no settings file, run init
 
   if (!_.has(settings, "_cosubSpecVersion") || settings._cosubSpecVersion != 2) {
@@ -48,7 +48,7 @@ if (action == 'create') {
     process.exit()
   }
 
-  methods.create(_.extend({endpoint: endpoint},settings, argv))
+  methods.upload(_.extend({endpoint: endpoint},settings, argv))
 }
 
 if (action == 'balance') {
@@ -61,7 +61,7 @@ if (action == 'status') {
 
 if (action == 'download') {
   if(!creationData) {
-    console.error('Error: HIT has not been created yet.')
+    console.error('Error: HIT settings have not been uploaded yet.')
     process.exit()
   }
 
