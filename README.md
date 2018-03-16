@@ -51,6 +51,46 @@ You can answer in seconds, minutes, hours, days, or weeks.
 > 5 minutes
 How much you will pay each worker (in dollars)?
 > $1
+Enter qualification formula
+(type 'help' for reminders on syntax, 'list' to see current formulae, and 'done' to finish qualifications)
+> help
+The syntax for a qualification formula is:
+<NAME> <COMPARATOR> <VALUE>
+
+Names provided by MTurk are:
+ Masters
+ Worker_NumberHITsApproved
+ Worker_Locale
+ Worker_Adult
+ Worker_PercentAssignmentsApproved
+You can also use the name of a custom qualification you have created
+
+Comparators are:
+ =
+ !=
+ <
+ >
+ <=
+ >=
+ exists
+ doesntexist
+ in
+ notin
+
+Value can be:
+ a single integer: 5
+ a list of integers: 5, 7, 23, 8
+ a single location (ISO-3066 country code with optional ISO 3166-2 subdivision): US:NY
+ a list of locations: US:NY, MEX, CAN
+
+Enter next formula (or 'help', 'list', or 'done')
+> Worker_Locale in US
+Enter next formula (or 'help', 'list', or 'done')
+> Worker_Locale notin US:NY, US:MA
+Enter next formula (or 'help', 'list', or 'done')
+> Worker_PercentAssignmentsApproved >= 85
+Enter next formula (or 'help', 'list', or 'done')
+> done
 Wrote to settings.json
 ```
 
