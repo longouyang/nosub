@@ -12,11 +12,7 @@ sudo npm install -g longouyang/nosub
 
 (todo: windows)
 
-# Usage
-
-## Authentication credentials
-
-First, place your AWS authentication credentials in `~/.aws/credentials` in this format:
+Next, make a subdirectory called `aws` in your home directory (`~`) and in it place your AWS authentication credentials in a file called `credentials`. Use this format:
 
 ```
 [default]
@@ -24,9 +20,7 @@ aws_access_key_id = <ACCESS KEY ID>
 aws_secret_access_key = <SECRET ACCESS KEY>
 ```
 
-(todo: windows)
-
-(todo: mention auth variables, maybe custom allow auth files too)
+# Usage
 
 ## Initializing a HIT
 
