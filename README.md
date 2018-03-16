@@ -20,6 +20,8 @@ aws_access_key_id = <ACCESS KEY ID>
 aws_secret_access_key = <SECRET ACCESS KEY>
 ```
 
+(todo: mention env variables, maybe read auth from disk?)
+
 # Usage
 
 ## Initializing a HIT
