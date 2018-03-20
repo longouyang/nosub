@@ -474,7 +474,7 @@ function HITDownloadResults(HITId, dirName, deanonymize, mtc) {
 
                  console.log(`${assnNum} Downloaded ${a.AssignmentId}`)
                  var filename = dirName + a.AssignmentId + '.json';
-                 fs.writeFileSync(filename, JSON.stringify(a, null, 1))
+                 fs.writeFileSync(filename, JSON.stringify(data, null, 1))
                })
 
         if (assnCount < numSubmitted) {
