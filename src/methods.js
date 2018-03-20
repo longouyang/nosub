@@ -175,13 +175,9 @@ function init(opts) {
 
 // TODO? in addition to command-line and stdin interfaces, also allow programmatic access
 function upload(opts) {
-  // TODO: there's a better way to write this
-  try {
-    readCreationData(opts.endpoint)
+  var creationData = JSON.parse(fs.readFileSync('hit-ids.json'));
+  if (_.has(creationData, opts.endpoint)) {
     console.error(`You've already uploaded this HIT to ${opts.endpoint}`)
-    process.exit()
-  } catch(e) {
-
   }
 
   var allQuestions = [
