@@ -457,19 +457,24 @@ function HITDownloadResults(HITId, dirName, deanonymize, mtc) {
                  }
                  var xmlDoc = a.Answer;
                  var xmlConverted = convert.xml2js(xmlDoc, {compact: true});
-                 var pairs = xmlConverted.QuestionFormAnswers.Answer
-                     .map(function(e) {
-                       var parsedText
-                       try {
-                         parsedText = JSON.parse(e.FreeText._text)
-                       } catch (err) {
-                         console.log(`Couldn't parse ${e.QuestionIdentifier} response so left as string: `)
-                         console.log(e.FreeText._text)
-                         parsedText = e.FreeText._text
-                       }
 
-                       return [e.QuestionIdentifier._text, parsedText]
-                     })
+                 var answers = xmlConverted.QuestionFormAnswers.Answer;
+                 if (!_.isArray(answers)) {
+                   answers = [answers]
+                 }
+
+                 var pairs = answers.map(function(e) {
+                   var parsedText
+                   try {
+                     parsedText = JSON.parse(e.FreeText._text)
+                   } catch (err) {
+                     console.log(`Couldn't parse ${e.QuestionIdentifier} response so left as string: `)
+                     console.log(e.FreeText._text)
+                     parsedText = e.FreeText._text
+                   }
+
+                   return [e.QuestionIdentifier._text, parsedText]
+                 })
                  var data = _.extend({}, metadata, {answers: _.fromPairs(pairs)})
 
                  console.log(`${assnNum} Downloaded ${a.AssignmentId}`)
