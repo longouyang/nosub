@@ -8,10 +8,14 @@
       "nosub": "nosub"
   },
   "bin" : { "nosub" : "./src/index.js" },
+  "engines": {
+    "node": ">=4"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/longouyang/nosub.git"
   },
+
   "keywords": [
     "mturk",
     "nosub"
