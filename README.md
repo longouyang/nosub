@@ -37,7 +37,7 @@ You only need to initialize the HIT once -- after that, you can do any the manag
 
 Initializing can be done in batch or single mode.
 In batch mode, your task is spread across multiple HITs of 9 or fewer assignments (this avoids the extra 20% fee charged by Amazon).
-Note that if you choose to use batch mode, you may want to implement some way of preventing the same worker from completing assignments in multiple batches (e.g., [uniqueturker.com](https://uniqueturker.myleott.com)
+Note that if you choose to use batch mode, you may want to implement some way of preventing the same worker from completing assignments in multiple batches (e.g., [Unique Turker](https://uniqueturker.myleott.com)
 
 ## Managing a HIT
 
