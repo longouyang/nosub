@@ -13,8 +13,8 @@ sudo npm install -g longouyang/nosub
 
 (todo: windows)
 
-Next, go to your home directory and make a subdirectory called `.aws`.
-Create a file called `credentials` (not `credentials.txt` or anything like that, just `credentials`) and paste in your AWS credentials in this format:
+Next, make a subdirectory called `.aws` in your home directory.
+Inside that subdirectory, create a file called `credentials` (not `credentials.txt` or anything like that, just `credentials`) and paste in your AWS credentials in this format:
 
 ```
 [default]
