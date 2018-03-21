@@ -175,10 +175,15 @@ function init(opts) {
 
 // TODO? in addition to command-line and stdin interfaces, also allow programmatic access
 function upload(opts) {
-  var creationData = JSON.parse(fs.readFileSync('hit-ids.json'));
-  if (_.has(creationData, opts.endpoint)) {
-    console.error(`You've already uploaded this HIT to ${opts.endpoint}`)
+  try {
+    var creationData = JSON.parse(fs.readFileSync('hit-ids.json'));
+    if (_.has(creationData, opts.endpoint)) {
+      console.error(`You've already uploaded this HIT to ${opts.endpoint}`)
+    }
+  } catch(e) {
+
   }
+
 
   var allQuestions = [
     {
