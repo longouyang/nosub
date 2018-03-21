@@ -4,9 +4,8 @@ A command-line tool for creating and managing external HITs on Amazon's Mechanic
 
 ## Installation
 
-nosub requires [Node.js](https://nodejs.org) version 4 or higher.
-
-From the command line and any folder, run:
+Requires [Node.js](https://nodejs.org) version 4 or higher.
+To install nosub, run this on the command line (you can be in any folder):
 
 ```
 sudo npm install -g longouyang/nosub
@@ -14,7 +13,8 @@ sudo npm install -g longouyang/nosub
 
 (todo: windows)
 
-Next, make a subdirectory called `.aws` in your home directory (`~`) and in it place your AWS authentication credentials in a file called `credentials` (not `credentials.txt` or anything like that, just `credentials`). Use *exactly* this format:
+Next, go to your home directory and make a subdirectory called `.aws`.
+Create a file called `credentials` (not `credentials.txt` or anything like that, just `credentials`) and paste in your AWS credentials in this format:
 
 ```
 [default]
@@ -22,7 +22,7 @@ aws_access_key_id = <ACCESS KEY ID>
 aws_secret_access_key = <SECRET ACCESS KEY>
 ```
 
-(the `[default]` line is required)
+(You must use this exact format; the `[default]` line is required)
 
 (todo: mention env variables, maybe read auth from disk?)
 
@@ -35,7 +35,8 @@ Now, initialize by running `nosub init`.
 This will walk you through creating your HIT and store your settings in the file `settings.json`.
 You only need to initialize the HIT once -- after that, you can do any the management actions listed in the next action.
 
-Initializing can be done in batch or single mode.
+The walkthrough will ask you whether you want to use batch or single mode.
+In single mode, your task is just a single HIT.
 In batch mode, your task is spread across multiple HITs of 9 or fewer assignments (this avoids the extra 20% fee charged by Amazon).
 Note that if you choose to use batch mode, you may want to implement some way of preventing the same worker from completing assignments in multiple batches (e.g., [Unique Turker](https://uniqueturker.myleott.com)
 
