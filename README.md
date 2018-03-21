@@ -32,72 +32,10 @@ aws_secret_access_key = <SECRET ACCESS KEY>
 
 Next, go to a folder where you want to store your settings and results for a single HIT.
 Now, initialize by running `nosub init`.
-This will walk you through creating your HIT and store your settings in the file `settings.json`:
+This will walk you through creating your HIT and store your settings in the file `settings.json`.
+You only need to initialize the HIT once -- after that, you can do any the management actions.
 
-```
-What is your task URL?
-> https://foo.com
-What is the title of your HIT?
-> Bar
-What is the description of your HIT?
-> Baz
-Provide some keywords for the HIT:
-> qux
-Do you want to run in (b)atch or (s)ingle mode?
-> b
-What frame height do you want?
-> 450
-How long will a worker have to complete your HIT?
-You can answer in seconds, minutes, hours, days, or weeks.
-> 30 minutes
-After how long should unreviewed assignments be automatically approved?
-You can answer in seconds, minutes, hours, days, or weeks.
-> 5 minutes
-How much you will pay each worker (in dollars)?
-> $1
-Enter qualification formula
-(type 'help' for reminders on syntax, 'list' to see current formulae, and 'done' to finish qualifications)
-> help
-The syntax for a qualification formula is:
-<NAME> <COMPARATOR> <VALUE>
-
-Names provided by MTurk are:
- Masters
- Worker_NumberHITsApproved
- Worker_Locale
- Worker_Adult
- Worker_PercentAssignmentsApproved
-You can also use the name of a custom qualification you have created
-
-Comparators are:
- =
- !=
- <
- >
- <=
- >=
- exists
- doesntexist
- in
- notin
-
-Value can be:
- a single integer: 5
- a list of integers: 5, 7, 23, 8
- a single location (ISO-3066 country code with optional ISO 3166-2 subdivision): US:NY
- a list of locations: US:NY, MEX, CAN
-
-Enter next formula (or 'help', 'list', or 'done')
-> Worker_Locale in US
-Enter next formula (or 'help', 'list', or 'done')
-> Worker_Locale notin US:NY, US:MA
-Enter next formula (or 'help', 'list', or 'done')
-> Worker_PercentAssignmentsApproved >= 85
-Enter next formula (or 'help', 'list', or 'done')
-> done
-Wrote to settings.json
-```
-
+Initializing can be done in batch or single mode.
 In batch mode, your task is spread across multiple HITs of 9 or fewer assignments (this avoids the extra 20% fee charged by Amazon).
 Note that if you choose to use batch mode, you may want to implement some way of preventing the same worker from completing assignments in multiple batches (e.g., [uniqueturker.com](https://uniqueturker.myleott.com)
 
