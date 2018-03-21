@@ -139,8 +139,8 @@ function init(opts) {
      },
      // NB: not transformed to a string, only strip currency indicator
      transform: function(_x) {
-       var x = _x + '';
-       return x.replace('$','')
+       var x = parseFloat(_x.replace('$',''));
+       return x + '';
      }
     }
   ];
