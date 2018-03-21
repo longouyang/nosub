@@ -99,7 +99,6 @@ Wrote to settings.json
 ```
 
 In batch mode, your task is spread across multiple HITs of 9 or fewer assignments (this avoids the extra 20% fee charged by Amazon).
-These batch HITs are started all at once.
 Note that if you choose to use batch mode, you may want to implement some way of preventing the same worker from completing assignments in multiple batches (e.g., [uniqueturker.com](https://uniqueturker.myleott.com)
 
 ## Managing a HIT
@@ -122,6 +121,8 @@ By default, actions take place on the sandbox. You can run actions in production
 (todo: not yet implemented: `history`)
 
 ### `upload`
+
+In batch mode, all batch HITs are started at the same time.
 
 ### `add`
 
