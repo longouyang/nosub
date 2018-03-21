@@ -33,7 +33,7 @@ aws_secret_access_key = <SECRET ACCESS KEY>
 Next, go to a folder where you want to store your settings and results for a single HIT.
 Now, initialize by running `nosub init`.
 This will walk you through creating your HIT and store your settings in the file `settings.json`.
-You only need to initialize the HIT once -- after that, you can do any the management actions.
+You only need to initialize the HIT once -- after that, you can do any the management actions listed in the next action.
 
 Initializing can be done in batch or single mode.
 In batch mode, your task is spread across multiple HITs of 9 or fewer assignments (this avoids the extra 20% fee charged by Amazon).
@@ -43,20 +43,20 @@ Note that if you choose to use batch mode, you may want to implement some way of
 
 After initializing, you can do these management actions.
 
-```
+```sh
 nosub upload   # send HIT settings to mturk
 nosub add <N> assignments
 nosub add <N> {days/hours/minutes}
 nosub expire   # expire hit
-nosub download # download results to sandbox-results/ or production-results/
-nosub status   # summarize HIT (settings, time left, # assignments, ...)
-nosub history  # show history of nosub actions
+nosub download # download results
+nosub status   # show HIT completion status (time and assignments remaining)
+nosub log      # show history of nosub actions
 nosub balance  # get mturk balance
 ```
 
-By default, actions take place on the sandbox. You can run actions in production mode by adding '-p' after nosub, e.g., `nosub -p upload` uploads the HIT to the production site rather than the sandbox.
+By default, actions take place on the sandbox. You can run actions in production mode by adding `-p` after nosub, e.g., `nosub -p upload` uploads the HIT to the production site rather than the sandbox.
 
-(todo: not yet implemented: `history`)
+(todo: not yet implemented: `log`)
 
 ### `upload`
 
