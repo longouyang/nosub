@@ -6,19 +6,23 @@ A command-line tool for creating and managing external HITs on Amazon's Mechanic
 
 nosub requires [Node.js](https://nodejs.org) version 4 or higher.
 
+From the command line and any folder, run:
+
 ```
 sudo npm install -g longouyang/nosub
 ```
 
 (todo: windows)
 
-Next, make a subdirectory called `.aws` in your home directory (`~`) and in it place your AWS authentication credentials in a file called `credentials`. Use this format:
+Next, make a subdirectory called `.aws` in your home directory (`~`) and in it place your AWS authentication credentials in a file called `credentials` (not `credentials.txt` or anything like that, just `credentials`). Use *exactly* this format:
 
 ```
 [default]
 aws_access_key_id = <ACCESS KEY ID>
 aws_secret_access_key = <SECRET ACCESS KEY>
 ```
+
+(the `[default]` line is required)
 
 (todo: mention env variables, maybe read auth from disk?)
 
