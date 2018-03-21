@@ -82,3 +82,28 @@ the anonymization is deterministic (md5 hash of your requester id concatenated w
 ### `balance`
 
 ### `history`
+
+# Advanced usage
+
+## Custom qualifications
+
+To create a custom qualification, first install the `aws-shell` command line utility.
+Then, start the utility:
+
+```
+aws-shell
+```
+
+Create a qualification using `create-qualification-type`. An example:
+
+```
+mturk create-qualification-type --name CompletedPretraining --description 'Testing qualification' --qualification-type-status Active --endpoint-url https://mturk-requester-sandbox.us-east-1.amazonaws.com
+```
+
+Now you can use the name that you  as in a qualification formula when you initialize your HIT:
+
+```
+CompletedPretraining exists
+```
+
+(todo: more detail)
