@@ -179,6 +179,7 @@ function upload(opts) {
     var creationData = JSON.parse(fs.readFileSync('hit-ids.json'));
     if (_.has(creationData, opts.endpoint)) {
       console.error(`You've already uploaded this HIT to ${opts.endpoint}`)
+      process.exit()
     }
   } catch(e) {
 
