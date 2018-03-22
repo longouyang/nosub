@@ -88,23 +88,73 @@ the anonymization is deterministic (md5 hash of your requester id concatenated w
 
 ## Custom qualifications
 
-To create a custom qualification, first install the `aws-shell` command line utility.
-Then, start the utility:
+You can use custom qualifications to target or exclude workers based on various criteria.
+As a basic example, suppose we are creating a HIT (call it HIT B) that should only be open to workers who have already completed some previous HIT (HIT A).
+The idea here is to create a Qualification, grant it to every worker that completed HIT A, and require that this Qualification exists for HIT B.
+
+First install the [`aws-shell` command line utility](https://github.com/awslabs/aws-shell).
+Then, start the utility on the command line using the command `aws-shell`.
+Inside the utility, create a qualification using `create-qualification-type`, e.g.,
 
 ```
-aws-shell
+aws> mturk create-qualification-type \
+       --name CompletedPretraining
+       --description 'Testing qualification' \
+       --qualification-type-status Active
 ```
 
-Create a qualification using `create-qualification-type`. An example:
+(Here, we've created a Qualification on production;
+To create this same qualification on the sandbox, add the line `--endpoint-url https://mturk-requester-sandbox.us-east-1.amazonaws.com`.
+It's useful to create the qualification on both sandbox and production *using the same name* to facilitate testing.)
+The result of our command is:
+
 
 ```
-mturk create-qualification-type --name CompletedPretraining --description 'Testing qualification' --qualification-type-status Active --endpoint-url https://mturk-requester-sandbox.us-east-1.amazonaws.com
+{
+    "QualificationType": {
+        "AutoGranted": false,
+        "Description": "Testing qualification",
+        "QualificationTypeId": "32R8QD8BQ9UMMSZK1CNALDNHI99CD6",
+        "CreationTime": 1521756718.0,
+        "IsRequestable": true,
+        "QualificationTypeStatus": "Active",
+        "Name": "CompletedPretraining"
+    }
+}
 ```
 
-Now you can use the name that you  as in a qualification formula when you initialize your HIT:
+Now, we need to get a list of all worker ids that completed HIT A.
+After that, grant the qualification to those worker ids using the `associate-qualification-with-worker` command using the qualification type id from the response above:
 
 ```
-CompletedPretraining exists
+aws> mturk associate-qualification-with-worker \
+       --qualification-type-id 32R8QD8BQ9UMMSZK1CNALDNHI99CD6 \
+       --worker-id <WORKER-ID-1>
+       
+aws> mturk associate-qualification-with-worker \
+       --qualification-type-id 32R8QD8BQ9UMMSZK1CNALDNHI99CD6 \
+       --worker-id <WORKER-ID-2>
+
+...
 ```
 
-(todo: more detail)
+Now, when you initialize HIT B, you can use the qualification name in nosub qualification formulae:
+
+```
+> nosub init
+
+What is your task URL? 
+> example.com
+...
+Enter qualification formula
+(type 'help' for reminders on syntax, 'list' to see current formulae, and 'done' to finish qualifications)
+> CompletedPretraining exists
+```
+
+Custom qualifications can be quite powerful.
+However, because there are so many different ways you can use them, nosub currently does not automate much of the process -- you'll need to do a fair amount of manual work using the `aws-shell` utility.
+For more, see the [Amazon documentation](https://docs.aws.amazon.com/AWSMechTurk/latest/AWSMechanicalTurkRequester/Concepts_QualificationsArticle.html).
+
+## Bonusing logic
+
+todo
