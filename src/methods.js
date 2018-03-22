@@ -690,7 +690,6 @@ function addAssignments(creationData, numAssignments, endpoint) {
 }
 
 function balance(endpoint) {
-  var HITId = readCreationData(endpoint).HITId;
   var mtc = getClient({endpoint: endpoint});
 
   mtc.getAccountBalance({})
