@@ -41,6 +41,13 @@ try {
   //console.log(err)
 }
 
+var actions = ['init', 'upload', 'balance', 'status', 'download', 'add', 'expire'];
+
+if (!_.includes(actions, action)) {
+  console.log(`Unknown action ${action}`)
+  console.log(`Available actions: ${actions.join(', ')}`)
+  process.exit()
+}
 
 // TODO: move this logic inside the method
 if (action == 'upload') {
