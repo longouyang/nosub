@@ -15,10 +15,14 @@ var SerialPromises = promiseUtils.SerialPromises,
 AWS.config.update({region:'us-east-1'});
 
 var args = process.argv.slice(2);
-var argv = require('minimist')(process.argv.slice(2));
+var argv = require('minimist')(process.argv.slice(2),
+                               // make -p a boolean flag so that the thing that follows isn't
+                               // interpreted as a value for p
+                               {boolean: 'p'});
+console.log(argv)
 var action  = _.isArray(argv['_']) ? argv['_'][0] : argv['_'];
 
-var endpoint = _.has(argv, 'p') || _.has(argv, 'production') ? 'production' : 'sandbox';
+var endpoint = argv.p ? 'production' : 'sandbox';
 
 // TODO: read settings here, then rewrite methods to take HITId as an argument
 var settings = {}
