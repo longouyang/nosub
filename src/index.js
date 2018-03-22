@@ -19,7 +19,6 @@ var argv = require('minimist')(process.argv.slice(2),
                                // make -p a boolean flag so that the thing that follows isn't
                                // interpreted as a value for p
                                {boolean: 'p'});
-console.log(argv)
 var action  = _.isArray(argv['_']) ? argv['_'][0] : argv['_'];
 
 var endpoint = argv.p ? 'production' : 'sandbox';
