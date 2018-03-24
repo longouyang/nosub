@@ -3,6 +3,7 @@
 var ask = require('./ask');
 var readlineSync = require('readline-sync');
 var _ = require('lodash');
+var fs = require('fs')
 
 var quals = [];
 var responses = [];
@@ -99,6 +100,14 @@ function validateAndTransformFormula(str) {
 
   var name = strsplit[0];
 
+  // check if the user made a typo entering a system name
+  if (!_.includes(systemQualNames, name)) {
+    var nearbyName = _.find(systemQualNames, function(sn) { return editDistance(sn, name) < 3})
+    if (nearbyName) {
+        throw new Error(`Invalid qualification ${name}. Did you mean ${nearbyName}?`)
+    }
+  }
+
   if (strsplit.length < 2) {
     throw new Error('invalid formula')
   }
@@ -141,8 +150,44 @@ function validateAndTransformFormula(str) {
     _.extend(ret,
              _.fromPairs([[name == 'Worker_Locale' ? 'LocaleValues' : 'IntegerValues', value]]))
   }
+
   return ret
 }
+
+// HT https://gist.github.com/andrei-m/982927
+function editDistance(a, b){
+  if(a.length == 0) return b.length;
+  if(b.length == 0) return a.length;
+
+  var matrix = [];
+
+  // increment along the first column of each row
+  var i;
+  for(i = 0; i <= b.length; i++){
+    matrix[i] = [i];
+  }
+
+  // increment each column in the first row
+  var j;
+  for(j = 0; j <= a.length; j++){
+    matrix[0][j] = j;
+  }
+
+  // Fill in the rest of the matrix
+  for(i = 1; i <= b.length; i++){
+    for(j = 1; j <= a.length; j++){
+      if(b.charAt(i-1) == a.charAt(j-1)){
+        matrix[i][j] = matrix[i-1][j-1];
+      } else {
+        matrix[i][j] = Math.min(matrix[i-1][j-1] + 1, // substitution
+                                Math.min(matrix[i][j-1] + 1, // insertion
+                                         matrix[i-1][j] + 1)); // deletion
+      }
+    }
+  }
+
+  return matrix[b.length][a.length];
+};
 
 
 function formulaHelp() {
@@ -166,12 +211,26 @@ function formulaHelp() {
   console.log('')
 }
 
+function readLines(filename) {
+  var contents;
+  try {
+    contents = fs.readFileSync(filename, 'UTF8')
+  } catch(e) {
+    console.error('Error reading file')
+    console.error(e.message)
+  }
+  // ignore empty whitespace or lines starting with #
+  var lines = _.reject(contents.split('\n'),
+                       function(str) { return /^\s*$/.test(str) || /^#/.test(str) })
+  return lines;
+}
+
 var askQual = function(message) {
   if (typeof message == 'undefined') {
     if (quals.length == 0) {
-      message = `Enter qualification formula\n(type 'help' for reminders on syntax, 'list' to see current formulae, and 'done' to finish qualifications)`
+      message = `Enter qualification formula\n(type 'help' for reminders on syntax, 'list' to see current formulae, 'done' to finish qualifications, or 'load <filename>' to read qualifications from a file on disk.)`
     } else {
-      message = `Enter next formula (or 'help', 'list', or 'done')`
+      message = `Enter next formula (or 'help', 'list', 'load <filename>', or 'done')`
     }
 
   }
@@ -180,10 +239,33 @@ var askQual = function(message) {
   if (response == 'help') {
     formulaHelp()
     return askQual()
+  } else if (/^load/.test(response)) {
+    var filename = response.replace(/^load\s+/, "")
+    var lines = readLines(filename);
+
+    try {
+      quals = quals.concat(lines.map(validateAndTransformFormula))
+      responses = responses.concat(lines)
+
+      console.log(`Added qualifications from ${filename}:\n${responses.join('\n')}`)
+
+    } catch(e) {
+      console.error('Error loading from file:')
+      console.error(e.message)
+    } finally {
+      return askQual('')
+    }
   } else if (response == 'list') {
-    responses.forEach(function(resp,i) {
-      console.log(`${i+1}. ${resp}`)
-    } )
+    if (responses.length == 0) {
+      console.log('No qualifications entered\n')
+    } else {
+      console.log('Qualifications entered so far:')
+      responses.forEach(function(resp,i) {
+        console.log(`${i+1}. ${resp}`)
+      } )
+      console.log('')
+    }
+
     return askQual()
   } else if (response == 'done') {
     return quals
@@ -192,6 +274,7 @@ var askQual = function(message) {
     try {
       qual = validateAndTransformFormula(response)
       responses.push(response)
+      console.log(`Added ${qual.Name} qualifications\n`)
       quals.push(qual)
       return askQual()
     } catch (e) {
@@ -210,6 +293,8 @@ module.exports = {
 
 //formulaHelp()
 
+//console.log(JSON.stringify(loadFromFile('quals.txt'), null, 1))
+//console.log(askQual())
 // Worker_Locale = MX
 // Worker_Locale = MEX
 // Worker_Locale notin USA:PA, USA:NY, USA:FL
