@@ -480,14 +480,18 @@ function HITDownloadResults(HITId, dirName, deanonymize, mtc) {
                  var data = _.extend({}, metadata, {answers: _.fromPairs(pairs)})
 
                  console.log(`${assnNum} Downloaded ${a.AssignmentId}`)
-                 var filename = dirName + a.AssignmentId + '.json';
+                 var filename = dirName + HITId + '-' + a.AssignmentId + '.json';
                  fs.writeFileSync(filename, JSON.stringify(data, null, 1))
                })
 
+        assnCount += data.NumResults;
+
         if (assnCount < numSubmitted) {
           return new Promise(function() {
-            nextDownload(data.NextToken, assnCount + data.NumResults)
+            nextDownload(data.NextToken, assnCount)
           })
+        } else {
+          return true;
         }
       })
       .catch(function(e) {
@@ -497,8 +501,8 @@ function HITDownloadResults(HITId, dirName, deanonymize, mtc) {
 
   var numSubmitted = 0;
   var existingAssignmentIds = _.chain(fs.readdirSync(dirName))
-      .filter(function(filename) { return /\.json$/.test(filename) })
-      .map(function(filename) { return filename.replace(".json", "")})
+      .filter(function(filename) { return filename.indexOf(HITId) == 0 })
+      .map(function(filename) { return filename.replace(HITId + '-', '').replace(".json", "")})
       .value()
 
   console.log(`Getting status of HIT ${HITId}`)
