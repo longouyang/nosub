@@ -24,8 +24,6 @@ aws_secret_access_key = <SECRET ACCESS KEY>
 
 (You must use this exact format; the `[default]` line is required)
 
-(todo: mention env variables, maybe read auth from disk?)
-
 # Usage
 
 ## Initializing a HIT
@@ -38,7 +36,7 @@ You only need to initialize the HIT once -- after that, you can do any the manag
 The walkthrough will ask you whether you want to use batch or single mode.
 In single mode, your task is just a single HIT.
 In batch mode, your task is spread across multiple HITs of 9 or fewer assignments (this avoids the extra 20% fee charged by Amazon).
-Note that if you choose to use batch mode, you may want to implement some way of preventing the same worker from completing assignments in multiple batches (e.g., [Unique Turker](https://uniqueturker.myleott.com)
+Note that if you choose to use batch mode, you may want to implement some way of preventing the same worker from completing assignments in multiple batches (e.g., [Unique Turker](https://uniqueturker.myleott.com))
 
 ## Managing a HIT
 
@@ -51,13 +49,10 @@ nosub add <N> {days/hours/minutes}
 nosub expire   # expire hit
 nosub download # download results
 nosub status   # show HIT completion status (time and assignments remaining)
-nosub log      # show history of nosub actions
 nosub balance  # get mturk balance
 ```
 
 By default, actions take place on the sandbox. You can run actions in production mode by adding `-p` after nosub, e.g., `nosub -p upload` uploads the HIT to the production site rather than the sandbox.
-
-(todo: not yet implemented: `log`)
 
 ### `upload`
 
@@ -71,18 +66,20 @@ You can also combine adding assignments and time:
 nosub add 40 assignments and 3 hours
 ```
 
-todo: in batch mode, assignments are added by creating new batches. time is added only to unfinished batches.
+In batch mode, assignments are added by topping up any batches with fewer than 9 assignments allocated and then creating new batches. Adding time is added only to unfinished batches.
 
 ### `download`
 
-note: worker ids are anonymized by default.
-the anonymization is deterministic (md5 hash of your requester id concatenated with the worker's id), which allows you to check whether a worker performed this HIT multiple times or also performed a different HIT of yours in the past.
+Worker IDs are anonymized by default, though the anonymization is deterministic, which allows you to detect repeat workers or check if workers did previous studies. (The anonymized worker ID is the MD5 hash of your Requester ID concatenated with the Worker ID).
+To deanonymize workers, pass the `--deanonymize` flag.
 
 ### `status`
 
+Shows how many workers have completed your HITs and how much time is remaining.
+
 ### `balance`
 
-### `history`
+Shows your account balance.
 
 # Advanced usage
 
@@ -130,7 +127,7 @@ After that, grant the qualification to those worker ids using the `associate-qua
 aws> mturk associate-qualification-with-worker \
        --qualification-type-id 32R8QD8BQ9UMMSZK1CNALDNHI99CD6 \
        --worker-id <WORKER-ID-1>
-       
+
 aws> mturk associate-qualification-with-worker \
        --qualification-type-id 32R8QD8BQ9UMMSZK1CNALDNHI99CD6 \
        --worker-id <WORKER-ID-2>
@@ -143,7 +140,7 @@ Now, when you initialize HIT B, you can use the qualification name in nosub qual
 ```
 > nosub init
 
-What is your task URL? 
+What is your task URL?
 > example.com
 ...
 Enter qualification formula
@@ -154,7 +151,3 @@ Enter qualification formula
 Custom qualifications can be quite powerful.
 However, because there are so many different ways you can use them, nosub currently does not automate much of the process -- you'll need to do a fair amount of manual work using the `aws-shell` utility.
 For more, see the [Amazon documentation](https://docs.aws.amazon.com/AWSMechTurk/latest/AWSMechanicalTurkRequester/Concepts_QualificationsArticle.html).
-
-## Bonusing logic
-
-todo
