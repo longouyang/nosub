@@ -56,21 +56,40 @@ By default, actions take place on the sandbox. You can run actions in production
 
 ### `upload`
 
+This creates your HIT on the MTurk servers and starts data collection.
+It reads your local settings in `settings.json`, asks for some extra information (how many assignments and how long you want to run), and transmits all this to MTurk.
+The MTurk servers return some metadata that we store locally in `hit-ids.json`.
+
 In batch mode, all batch HITs are started at the same time.
 
 ### `add`
 
-You can also combine adding assignments and time:
+You can collect more assignments:
 
 ```
 nosub add 40 assignments and 3 hours
 ```
 
-In batch mode, assignments are added by topping up any batches with fewer than 9 assignments allocated and then creating new batches. Adding time is added only to unfinished batches.
+Or add more time for existing assignments:
+
+```
+nosub add 40 assignments and 3 hours
+```
+
+Or do both at once:
+
+```
+nosub add 40 assignments and 3 hours
+```
+
+In batch mode, assignments are added by topping up any batches with fewer than 9 assignments and then creating new batches. Adding time is added only to unfinished batches.
 
 ### `download`
 
-Worker IDs are anonymized by default, though the anonymization is deterministic, which allows you to detect repeat workers or check if workers did previous studies. (The anonymized worker ID is the MD5 hash of your Requester ID concatenated with the Worker ID).
+This downloads HIT results from MTurk.
+Sandbox results are stored in the `sandbox-results/` subdirectory and production results are stored in the `production-results/` subdirectory.
+Data from each assignment is saved in a separate JSON file.
+Worker IDs are anonymized by default, though the anonymization is deterministic, allowing you to detect repeat workers or check if workers did previous studies (the anonymized worker ID is the MD5 hash of your Requester ID concatenated with the Worker ID).
 To deanonymize workers, pass the `--deanonymize` flag.
 
 ### `status`
