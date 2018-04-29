@@ -630,7 +630,7 @@ function addAssignments(creationData, numAssignments, endpoint) {
           return HITAddAssignments(topupHit.HITId, topUpAmount, mtc)
           // wait a little bit and get new metadata for topped up hit
           // so we can update our local information about the hit
-            .then(delay(500))
+            .then(delay(1200))
             .then(function() {return mtc.getHIT({HITId: topupHit.HITId}).promise() })
         }
       )
