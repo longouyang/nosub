@@ -8,7 +8,8 @@ var AWS = require('aws-sdk'),
     crypto = require('crypto'),
     cTable = require('console.table'),
     promiseUtils = require('./promise-utils'),
-    quals = require('./quals');
+    quals = require('./quals'),
+    util = require('./util')
 
 var SerialPromises = promiseUtils.SerialPromises,
     SerialPromises2 = promiseUtils.SerialPromises2;
@@ -40,21 +41,6 @@ var getClient = function(opts) {
     {apiVersion: '2017-01-17',
      endpoint: endpoint
     });
-}
-
-var unitsToSeconds = {second: 1, minute: 60, hour: 3600, day: 86400, week: 604800};
-
-// converts a string input to a number of seconds
-function extractDuration(x) {
-  var match = /(\d+)\s*(second|minute|hour|day|week)/.exec(x);
-  var numUnits = parseFloat(match[1]),
-      unit = match[2];
-
-  return numUnits * unitsToSeconds[unit];
-}
-
-function validateDuration(x) {
-  return /\d+\s*(second|minute|hour|day|week)s?/.test(x)
 }
 
 
@@ -121,13 +107,13 @@ function init(opts) {
     },
     {name: "AssignmentDuration",
      message: "How long will a worker have to complete your HIT?\nYou can answer in seconds, minutes, hours, days, or weeks.",
-     validate: validateDuration
+     validate: util.validateDuration
      // NB: not transformed
     },
     // TODO: enter Infinity for no AutoApprovalDelay
     {name: "AutoApprovalDelay",
      message: 'After how long should unreviewed assignments be automatically approved?\nYou can answer in seconds, minutes, hours, days, or weeks.',
-     validate: validateDuration
+     validate: util.validateDuration
      // NB: not transformed
     },
     {name: "Reward",
@@ -212,10 +198,10 @@ function upload(opts) {
       message: ['How long do you want to run the HIT?',
                 'You can answer in seconds, minutes, hours, days, or weeks and you can always add more time using nosub add.'].join('\n'),
       validate: function(x) {
-        return validateDuration(x) ? true : 'Invalid duration'
+        return util.validateDuration(x) ? true : 'Invalid duration'
       },
       transform: function(x) {
-        return extractDuration(x)
+        return util.extractDuration(x)
       }
     }
   ];
@@ -280,8 +266,8 @@ function upload(opts) {
                            'AutoApprovalDelayInSeconds', 'LifetimeInSeconds', 'Reward',
                            'QualificationRequirements', 'Question', 'MaxAssignments'
                           ]);
-  turkParams.AssignmentDurationInSeconds = extractDuration(turkParams.AssignmentDurationInSeconds)
-  turkParams.AutoApprovalDelayInSeconds = extractDuration(turkParams.AutoApprovalDelayInSeconds)
+  turkParams.AssignmentDurationInSeconds = util.extractDuration(turkParams.AssignmentDurationInSeconds)
+  turkParams.AutoApprovalDelayInSeconds = util.extractDuration(turkParams.AutoApprovalDelayInSeconds)
   turkParams.Reward = turkParams.Reward + ""
 
   var endpoint = answers.endpoint;

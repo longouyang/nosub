@@ -6,7 +6,8 @@ var AWS = require('aws-sdk'),
     fs = require('fs'),
     convert = require('xml-js'),
     methods = require('./methods'),
-    promiseUtils = require('./promise-utils');
+    promiseUtils = require('./promise-utils'),
+    util = require('./util');
 
 var SerialPromises = promiseUtils.SerialPromises,
     SerialPromises2 = promiseUtils.SerialPromises2;
@@ -78,6 +79,7 @@ if (action == 'download') {
   methods.download(creationData, !!argv.deanonymize, endpoint)
 }
 
+// testing input: "add 5 assignments and 3 days, 1 hour and 15 minutes"
 if (action == 'add') {
   var argument = argv['_'].slice(1).join(' ')
   var assignmentsMatch = argument.match(/(\d+) +(assignment)s?/)
@@ -93,15 +95,11 @@ if (action == 'add') {
     })
   }
 
-  var timeMatch = argument.match(/(\d+) (second|minute|day|hour|week|month)/g)
+  var includesTime = util.validateDuration(argument);
   // handles mixing multiple units (e.g., 1 hour and 30 minutes)
-  if (timeMatch) {
+  if (includesTime) {
     promisors.push(function() {
-      var components = timeMatch.map(function(tm) { return tm.split(' ') })
-      var componentSeconds = components.map(function(pair) {
-        return parseInt(pair[0]) * {second: 1, minute: 60, hour: 3600, day: 86400, week: 604800}[pair[1]];
-      })
-      var seconds = _.sum(componentSeconds)
+      var seconds = util.extractDuration(argument);
       return methods.addTime(creationData, seconds, endpoint)
     })
   }
