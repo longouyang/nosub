@@ -44,6 +44,7 @@ var getClient = function(opts) {
 }
 
 
+
 // testing qualification entry:
 // node ../src/index.js init --Url foo.com --Title bar --Description baz --Keywords qux --Batch s --FrameHeight 450 --AssignmentDuration '45 minutes' --AutoApprovalDelay '5 minutes' --Reward 0.75
 function init(opts) {
@@ -159,8 +160,12 @@ function init(opts) {
   console.log('Wrote to settings.json')
 }
 
+var upload = require('./upload')
+
+// testing
+// node ../src/index.js upload --assignments 40 --duration '1 day'
 // TODO? in addition to command-line and stdin interfaces, also allow programmatic access
-function upload(opts) {
+function _upload(opts) {
   try {
     var creationData = JSON.parse(fs.readFileSync('hit-ids.json'));
     if (_.has(creationData, opts.endpoint)) {
@@ -223,6 +228,21 @@ function upload(opts) {
   var interactiveAnswers = _.fromPairs(ask.many(unansweredQuestions));
 
   var answers = _.extend({},noninteractiveAnswers, interactiveAnswers);
+
+  // check that balance suffices to pay for everything
+  var cost = 0;
+  var reward = parseFloat(opts.Reward);
+  if (opts.Batch) {
+    var batchFee = 0.2;
+    var totalCost = reward * answers.assignments * (1 + batchFee);
+    console.log(`Total cost is ${totalCost}`)
+    //console.log(opts)
+  } else {
+
+  }
+
+  //
+  process.exit()
 
   var externalQuestion =
       `<ExternalQuestion xmlns="http://mechanicalturk.amazonaws.com/AWSMechanicalTurkDataSchemas/2006-07-14/ExternalQuestion.xsd">
@@ -683,7 +703,7 @@ function addAssignments(creationData, numAssignments, endpoint) {
 function balance(endpoint) {
   var mtc = getClient({endpoint: endpoint});
 
-  mtc.getAccountBalance({})
+  return mtc.getAccountBalance({})
     .promise()
     .then(function(data) {
       console.log(`Available balance is ${data.AvailableBalance}`)
