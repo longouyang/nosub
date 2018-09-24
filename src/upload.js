@@ -103,13 +103,13 @@ async function uploadBatch(turkParams, endpoint) {
   try {
     for (const batchSize of batchSizes) {
       await delay(500);
-      let params = {
+      var params = {
         HITTypeId: response1.HITTypeId,
         MaxAssignments: batchSize,
         LifetimeInSeconds: turkParams.LifetimeInSeconds,
         Question: turkParams.Question
       }
-      let response = await mtc.createHITWithHITType(params).promise();
+      var response = await mtc.createHITWithHITType(params).promise();
       batchData.push(response)
       console.log(`Created batch ${response.HIT.HITId}`)
       console.log(`- Preview link: https://${domain}/mturk/preview?groupId=${response.HIT.HITGroupId}`)
