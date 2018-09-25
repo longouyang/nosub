@@ -28,7 +28,6 @@ async function upload(opts) {
   var mtc = getClient(opts)
 
   // check that we haven't already uploaded
-  // ------------------------------------------------------------
   try {
     var creationData = JSON.parse(fs.readFileSync('hit-ids.json'));
     if (_.has(creationData, opts.endpoint)) {
@@ -39,13 +38,18 @@ async function upload(opts) {
   }
 
   // ask for durations and assignments
-  // ------------------------------------------------------------
   var answers = askAssignmentsAndDuration(opts);
   var totalCost = await getCost(opts, answers.assignments);
   console.log('Cost will be $' + totalCost)
 
+  // initialize parameters for createHIT request to AWS
+  var createHITParams = makeCreateHITParams(opts, answers)
+
+  // map qualification names to ids and install in request parameters
+  var quals = await lookupQualificationNames(opts, answers, createHITParams);
+  createHITParams.QualificationRequirements = quals;
+
   // check that we have enough funds
-  // ------------------------------------------------------------
   var balanceData = await mtc.getAccountBalance({}).promise()
   var userBalance = parseFloat(balanceData.AvailableBalance)
   console.log('Account balance is $' + userBalance)
@@ -54,17 +58,7 @@ async function upload(opts) {
     process.exit()
   }
 
-  // initialize parameters for createHIT request to AWS
-  // ------------------------------------------------------------
-  var createHITParams = makeCreateHITParams(opts, answers)
-
-
-  // map qualification names to ids and install in request parameters
-  // ------------------------------------------------------------
-
-  var quals = await lookupQualificationNames(opts, answers, createHITParams);
-  createHITParams.QualificationRequirements = quals;
-
+  // fire request to AWS
   if (opts.Batch) {
     await uploadBatch(createHITParams, opts.endpoint)
   } else {
@@ -76,9 +70,7 @@ async function upload(opts) {
 async function uploadBatch(turkParams, endpoint) {
   var mtc = getClient({endpoint: endpoint})
   var metadata = {};
-
   var domain = endpoint == 'sandbox' ? 'workersandbox.mturk.com' : 'worker.mturk.com';
-
   var requestParams = _.omit(turkParams, 'LifetimeInSeconds', 'Question', 'MaxAssignments');
 
   try {
@@ -131,30 +123,29 @@ async function uploadBatch(turkParams, endpoint) {
                                   null,
                                   1
                                  ))
-  return Promise.resolve(true)
+  return batchData
 }
 
 async function uploadSingle(turkParams, endpoint) {
   var mtc = getClient({endpoint: endpoint})
+  try {
+    var response = await mtc.createHIT(turkParams).promise()
+  } catch(err) {
+    console.log('Error creating HIT')
+    console.error(err.message)
+  }
 
-  return mtc.createHIT(turkParams).promise()
-    .then(function(data) {
-      var hit = data.HIT
-      var existingHitIds = fs.existsSync('hit-ids.json') ? JSON.parse(fs.readFileSync('hit-ids.json')) : {}
+  var hit = response.HIT
+  var existingHitIds = fs.existsSync('hit-ids.json') ? JSON.parse(fs.readFileSync('hit-ids.json')) : {}
 
-      fs.writeFileSync('hit-ids.json',
-                       JSON.stringify(_.extend({},
-                                               existingHitIds,
-                                               _.fromPairs([[endpoint, hit]]))))
+  fs.writeFileSync('hit-ids.json',
+                   JSON.stringify(_.extend({},
+                                           existingHitIds,
+                                           _.fromPairs([[endpoint, hit]]))))
 
-      var domain = endpoint == 'sandbox' ? 'workersandbox.mturk.com' : 'worker.mturk.com'
-      console.log(`Uploaded. HIT ID is ${hit.HITId}`)
-      console.log(`Preview link: https://${domain}/mturk/preview?groupId=${data.HIT.HITGroupId}`)
-    })
-    .catch(function(err) {
-      console.log('Error creating HIT')
-      console.error(err.message)
-    })
+  var domain = endpoint == 'sandbox' ? 'workersandbox.mturk.com' : 'worker.mturk.com'
+  console.log(`Uploaded. HIT ID is ${hit.HITId}`)
+  console.log(`Preview link: https://${domain}/mturk/preview?groupId=${response.HIT.HITGroupId}`)
 }
 
 
@@ -303,38 +294,36 @@ async function lookupQualificationNames(opts, answers, params) {
   var endpoint = answers.endpoint
   var mtc = getClient({endpoint: endpoint, quiet: true})
   var qualNamesToIds = quals.namesToIds[endpoint];
-  return SerialPromises(params.QualificationRequirements,
-                 function(qr) {
-                   if (_.includes(quals.systemQualNames, qr.Name)) {
-                     var ret = _.chain(qr)
-                         .omit('Name')
-                         .extend({QualificationTypeId: qualNamesToIds[qr.Name]})
-                         .value()
-                     return Promise.resolve(ret)
-                   } else {
-                     return mtc.listQualificationTypes({
-                       MustBeRequestable: false,
-                       MustBeOwnedByCaller: true
-                     }).promise().then(function(data) {
-                       var serverQuals = data.QualificationTypes;
-                       var matchingServerQual = _.find(serverQuals,
-                                                       function(sq) {
-                                                         return sq.Name == qr.Name
-                                                       })
-                       if (matchingServerQual) {
-                         return _.chain(qr)
-                           .omit('Name')
-                           .extend({QualificationTypeId: matchingServerQual.QualificationTypeId})
-                           .value()
-                       } else {
-                         var foundServerNames = _.map(serverQuals, 'Name')
-                         console.error(`Error: No custom qualification with name ${qr.Name} found on ${endpoint}`)
-                         console.error(`(Names found on server: ${foundServerNames.join(', ')})`)
-                         process.exit()
-                       }
-                     })
-                   }
-                 })
+  var withIds = []
+  for (var qr of params.QualificationRequirements) {
+    if (_.includes(quals.systemQualNames, qr.Name)) {
+      var data = _.chain(qr)
+          .omit('Name')
+          .extend({QualificationTypeId: qualNamesToIds[qr.Name]})
+          .value()
+      withIds.push(data)
+    } else {
+      var requestParams = {
+        MustBeRequestable: false,
+        MustBeOwnedByCaller: true
+      }
+      var response = await mtc.listQualificationTypes(requestParams).promise()
+      var serverQuals = response.QualificationTypes;
+      var matchingServerQual = _.find(serverQuals, {Name: qr.Name})
+      if (matchingServerQual) {
+        withIds.push(_(qr)
+                 .omit('Name')
+                 .extend({QualificationTypeId: matchingServerQual.QualificationTypeId})
+                 .value())
+      } else {
+        var foundServerNames = _.map(serverQuals, 'Name')
+        console.error(`Error: No custom qualification with name ${qr.Name} found on ${endpoint}`)
+        console.error(`(Names found on server: ${foundServerNames.join(', ')})`)
+        process.exit()
+      }
+    }
+  }
+  return withIds
 }
 
 module.exports = upload
