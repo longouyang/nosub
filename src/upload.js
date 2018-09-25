@@ -286,16 +286,17 @@ function makeCreateHITParams(opts, answers) {
 async function getCost(opts, assignments) {
   var reward = parseFloat(opts.Reward);
 
+  // TODO: handle master worker and premium qualifications
   if (opts.Batch) {
     var batchFee = 0.2;
     var totalCost = reward * assignments * (1 + batchFee);
     return totalCost
   } else {
     // adding more assignments to single: add extra 20% fee if total number of assignments greater than 10
-    var fee = 0.2;
-    // read how many assignments we have so far
+    var singleFee = assignments > 9 ? 0.4 : 0.2;
+    var totalCost = reward * assignments * (1 + singleFee);
+    return totalCost
   }
-  // in single mode, we need to get current number of hits
 }
 
 async function lookupQualificationNames(opts, answers, params) {
