@@ -20,9 +20,9 @@ function delay(t, v) {
 // steps:
 // - check that we haven't already uploaded
 // - ask for duration and assignments
-// - check that we have enough funds
 // - initialize hit params
 // - fill in qualifications in hit params
+// - check that we have enough funds
 // - upload
 async function upload(opts) {
   var mtc = getClient(opts)
