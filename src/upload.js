@@ -39,15 +39,19 @@ async function upload(opts) {
 
   // ask for durations and assignments
   var answers = askAssignmentsAndDuration(opts);
-  var totalCost = await getCost(opts, answers.assignments);
-  console.log('Cost will be $' + totalCost)
 
   // initialize parameters for createHIT request to AWS
   var createHITParams = makeCreateHITParams(opts, answers)
 
+
   // map qualification names to ids and install in request parameters
   var quals = await lookupQualificationNames(opts, answers, createHITParams);
-  createHITParams.QualificationRequirements = quals;
+  createHITParams.QualificationRequirements = _.map(quals, function(q) { return _.omit(q, 'Name') });
+
+
+  var totalCost = await getCost(opts, answers.assignments, quals);
+  console.log('Cost will be $' + totalCost)
+
 
   // check that we have enough funds
   var balanceData = await mtc.getAccountBalance({}).promise()
@@ -274,20 +278,45 @@ function makeCreateHITParams(opts, answers) {
   return params;
 }
 
-async function getCost(opts, assignments) {
+
+// note: i made the premium-qualifications file by manually scraping data from mturk requester / requestersandbox web interfaces for creating HITs
+// then did some manual munging. and used csvtojson to make a js file
+// notes:
+// - 2012 US election exists on production but not sandbox.
+// - scraped ampersands turned into &amp; so i did a find-replace on those
+var premiumQualifications = require('./premium-qualifications')
+async function getCost(opts, assignments, qualifications) {
   var reward = parseFloat(opts.Reward);
 
-  // TODO: handle master worker and premium qualifications
-  if (opts.Batch) {
-    var batchFee = 0.2;
-    var totalCost = reward * assignments * (1 + batchFee);
-    return totalCost
-  } else {
-    // adding more assignments to single: add extra 20% fee if total number of assignments greater than 10
-    var singleFee = assignments > 9 ? 0.4 : 0.2;
-    var totalCost = reward * assignments * (1 + singleFee);
-    return totalCost
+  var addedFees = 0;
+  var nominalCost = reward * assignments
+
+  var qNames = _.map(qualifications, 'Name')
+  var qIds = _.map(qualifications, 'QualificationTypeId')
+
+  if (_.includes(qNames, 'Masters')) {
+    addedFees += 0.05; // 5% fee for masters
   }
+
+  if (opts.Batch) {
+    addedFees += 0.2;
+  } else {
+    // 20% extra fee if total number of assignments greater than 10
+    addedFees += (assignments > 9 ? 0.4 : 0.2);
+  }
+
+  var totalCost = nominalCost * (1 + addedFees)
+
+  _.each(qIds, function(id) {
+    var premiumEntry = _.find(premiumQualifications,
+                              function(pq) { return pq.sandboxId == id || pq.productionId == id})
+    if (premiumEntry) {
+      totalCost += premiumEntry.feeInDollars
+    }
+  })
+
+  return totalCost
+
 }
 
 async function lookupQualificationNames(opts, answers, params) {
@@ -298,7 +327,7 @@ async function lookupQualificationNames(opts, answers, params) {
   for (var qr of params.QualificationRequirements) {
     if (_.includes(quals.systemQualNames, qr.Name)) {
       var data = _.chain(qr)
-          .omit('Name')
+          //.omit('Name')
           .extend({QualificationTypeId: qualNamesToIds[qr.Name]})
           .value()
       withIds.push(data)
@@ -312,7 +341,7 @@ async function lookupQualificationNames(opts, answers, params) {
       var matchingServerQual = _.find(serverQuals, {Name: qr.Name})
       if (matchingServerQual) {
         withIds.push(_(qr)
-                 .omit('Name')
+                     //.omit('Name')
                  .extend({QualificationTypeId: matchingServerQual.QualificationTypeId})
                  .value())
       } else {
