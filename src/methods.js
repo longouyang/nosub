@@ -160,6 +160,7 @@ function init(opts) {
   console.log('Wrote to settings.json')
 }
 
+var getCost = require('./getCost')
 var upload = require('./upload')
 
 // testing
@@ -614,14 +615,37 @@ function HITAddAssignments(HITId, numAssignments, mtc) {
 }
 
 // testing: rm hit-ids.json; node ../src/index.js create --assignments 30 --duration "2 days"; gsleep 2s; node ../src/index.js add 29 assignments
-function addAssignments(creationData, numAssignments, endpoint) {
+async function addAssignments(creationData, numAssignments, endpoint) {
   var mtc = getClient({endpoint: endpoint});
   var isSingleMode = !_.isArray(creationData);
+
+  var opts, quals;
+  // first check balance
+  if (isSingleMode) {
+    opts = {Batch: true, Reward: creationData.Reward};
+    quals = creationData.QualificatonRequirements
+  } else {
+    opts = {Batch: true, Reward: creationData[0].HIT.Reward}
+    quals = creationData[0].HIT.QualificatonRequirements
+  }
+  var totalCost = await getCost(opts, numAssignments, quals)
+  console.log('Cost will be $' + totalCost)
+
+  // check that we have enough funds
+  var balanceData = await mtc.getAccountBalance({}).promise()
+  var userBalance = parseFloat(balanceData.AvailableBalance)
+  console.log('Account balance is $' + userBalance)
+  if (totalCost > userBalance) {
+    console.error('You don\'t have enough funds')
+    process.exit()
+  }
+
   if (isSingleMode) {
     return HITAddAssignments(creationData.HITId, numAssignments, mtc)
   } else {
     // first find the hit that has fewer than 9 assignments (if one exists)
     // and top it up to 9
+
     var hits = _.map(creationData, 'HIT');
 
     var topupHit = _.find(hits, function(h) { return h.MaxAssignments < 9 })
