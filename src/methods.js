@@ -444,6 +444,7 @@ function HITDownloadResults(HITId, dirName, deanonymize, mtc) {
         if (typeof assnCount == 'undefined') {
             assnCount = 0
         }
+        // console.log(`assnCount is ${assnCount}, numSubmitted is ${numSubmitted}`)
 
         var requestParams = _.extend({
             HITId: HITId,
@@ -459,6 +460,9 @@ function HITDownloadResults(HITId, dirName, deanonymize, mtc) {
             .then(function (data) {
                 //console.log(`NextToken is ${data.NextToken}`)
                 // read the xml inside each assignment, convert to js
+                // console.log(`assignments for hit ${HITId}, data.NumResults: ${data.NumResults}, data.Assignments.length: ${data.Assignments.length}`)
+                //process.exit()
+
                 _.each(data.Assignments,
                     function (a, i) {
                         var assnNum = assnCount + i + 1;
@@ -466,6 +470,7 @@ function HITDownloadResults(HITId, dirName, deanonymize, mtc) {
                             console.log(`${assnNum} Skipping ${a.AssignmentId}`)
                             return
                         }
+                        // console.log(`- ${a.AssignmentId}`)
                         var metadata = _.omit(a, 'Answer')
                         if (!deanonymize) {
                             var salt = AWS.config.credentials.accessKeyId
@@ -560,6 +565,9 @@ function download(creationData, deanonymize, endpoint) {
         return HITDownloadResults(HITId, dirName, deanonymize, mtc)
     } else {
         var HITIds = _.map(creationData, 'HIT.HITId')
+        // console.log('create SerialPromises for HIT IDS:')
+        // console.log(HITIds);
+        // process.exit()
 
         return SerialPromises(HITIds, function (id) {
             return HITDownloadResults(id, dirName, deanonymize, mtc)
