@@ -508,7 +508,7 @@ function HITDownloadResults(HITId, dirName, deanonymize, mtc) {
 
                 if (assnCount < numSubmitted) {
                     return new Promise(function () {
-                        nextDownload(data.NextToken, assnCount)
+                        nextDownload(data.NextToken, numSubmitted - assnCount)
                     })
                 } else {
                     return true;
@@ -526,12 +526,16 @@ function HITDownloadResults(HITId, dirName, deanonymize, mtc) {
         .value()
 
     console.log(`Getting status of HIT ${HITId}`)
+    // if (/3J94SKD/.test(HITId)) {
+    //     console.log('got here')
+    // }
 
     return mtc
         .getHIT({ HITId: HITId })
         .promise()
         .then(function (data) {
             numSubmitted = data.HIT.MaxAssignments - data.HIT.NumberOfAssignmentsAvailable
+            // console.log(`numSubmitted ${numSubmitted}`)
             if (numSubmitted == 0) {
                 console.log('No assignments completed yet.')
             } else {
@@ -631,6 +635,18 @@ function HITAddAssignments(HITId, numAssignments, mtc) {
     })
 }
 
+const uses_aws_billing = !!(process.env.AWS_BILLING);
+
+async function getAccountBalance(mtc) {
+    if (uses_aws_billing) {
+        return Promise.resolve({ AvailableBalance: 999999 })
+    } else {
+        const bal = await mtc.getAccountBalance({}).promise()
+        return bal
+    }
+
+}
+
 // testing: rm hit-ids.json; node ../src/index.js create --assignments 30 --duration "2 days"; gsleep 2s; node ../src/index.js add 29 assignments
 async function addAssignments(creationData, numAssignments, endpoint) {
     var mtc = getClient({ endpoint: endpoint });
@@ -649,7 +665,7 @@ async function addAssignments(creationData, numAssignments, endpoint) {
     console.log('Cost will be $' + totalCost)
 
     // check that we have enough funds
-    var balanceData = await mtc.getAccountBalance({}).promise()
+    var balanceData = await getAccountBalance(mtc);
     var userBalance = parseFloat(balanceData.AvailableBalance)
     console.log('Account balance is $' + userBalance)
     if (totalCost > userBalance) {
@@ -744,8 +760,7 @@ async function addAssignments(creationData, numAssignments, endpoint) {
 function balance(endpoint) {
     var mtc = getClient({ endpoint: endpoint });
 
-    return mtc.getAccountBalance({})
-        .promise()
+    return getAccountBalance(mtc)
         .then(function (data) {
             console.log(`Available balance is ${data.AvailableBalance}`)
         })
