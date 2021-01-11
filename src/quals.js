@@ -9,10 +9,10 @@ var quals = [];
 var responses = [];
 
 var systemQualNames = ['Masters',
-                       'Worker_NumberHITsApproved',
-                       'Worker_Locale',
-                       'Worker_Adult',
-                       'Worker_PercentAssignmentsApproved']
+  'Worker_NumberHITsApproved',
+  'Worker_Locale',
+  'Worker_Adult',
+  'Worker_PercentAssignmentsApproved']
 
 var qualNamesToIds = {
   production: {
@@ -31,25 +31,28 @@ var qualNamesToIds = {
   }
 }
 
+const premiumQualifications = require('./premium-qualifications');
+
+
 var comparators = ['=',
-                   '!=',
-                   '<',
-                   '>',
-                   '<=',
-                   '>=',
-                   'exists',
-                   'doesntexist',
-                   'in',
-                   'notin'
-                  ]
+  '!=',
+  '<',
+  '>',
+  '<=',
+  '>=',
+  'exists',
+  'doesntexist',
+  'in',
+  'notin'
+]
 
 var comparatorTransforms = {
   '<': 'LessThan',
   '<=': 'LessThanOrEqualTo',
   '>': 'GreaterThan',
   '>=': 'GreaterThanOrEqualTo',
-  '=':'EqualTo',
-  '!=':'NotEqualTo',
+  '=': 'EqualTo',
+  '!=': 'NotEqualTo',
   'exists': 'Exists',
   'doesntexist': 'DoesNotExist',
   'in': 'In',
@@ -62,11 +65,11 @@ var isoSubdivisions = require('./iso/subdivisions');
 function validateAndTransformLocale(str) {
   var strsplit = str.split(':')
   var country = strsplit[0],
-      subdivision = strsplit[1],
-      hasSubdivision = !_.isUndefined(subdivision)
+    subdivision = strsplit[1],
+    hasSubdivision = !_.isUndefined(subdivision)
 
   var countryData = _.find(isoCountries,
-                           function(x) { return x.c2 == country || x.c3 == country })
+    function (x) { return x.c2 == country || x.c3 == country })
   if (!countryData) {
     throw new Error('Unknown country ' + country)
   }
@@ -74,7 +77,7 @@ function validateAndTransformLocale(str) {
   var subdivisionData;
   if (hasSubdivision) {
     subdivisionData = _.find(isoSubdivisions,
-                             function(x) { return x.sub == countryData.c2 + '-' + subdivision })
+      function (x) { return x.sub == countryData.c2 + '-' + subdivision })
 
     if (!subdivisionData) {
       throw new Error(`Unknown subdivision ${subdivision} for country ${country}`)
@@ -88,23 +91,26 @@ function validateAndTransformLocale(str) {
 
 }
 
+var lexSplit = require('shlex').split;
+
 // validates as we go
 function validateAndTransformFormula(str) {
   // standardize whitespace delimiters to to single space
-  var strsplit = str.split(/ +/g);
+  // var strsplit = str.split(/ +/g);
+  var strsplit = lexSplit(str);
   if (strsplit.length > 3) {
     strsplit = [strsplit[0],
-                strsplit[1],
-                strsplit.slice(2).join(' ')]
+    strsplit[1],
+    strsplit.slice(2).join(' ')]
   }
 
   var name = strsplit[0];
 
   // check if the user made a typo entering a system name
   if (!_.includes(systemQualNames, name)) {
-    var nearbyName = _.find(systemQualNames, function(sn) { return editDistance(sn, name) < 3})
+    var nearbyName = _.find(systemQualNames, function (sn) { return editDistance(sn, name) < 3 })
     if (nearbyName) {
-        throw new Error(`Invalid qualification ${name}. Did you mean ${nearbyName}?`)
+      throw new Error(`Invalid qualification ${name}. Did you mean ${nearbyName}?`)
     }
   }
 
@@ -113,8 +119,8 @@ function validateAndTransformFormula(str) {
   }
 
   var _comp = strsplit[1],
-      comp = _comp.toLowerCase(), // case insensitive comparators
-      _value = strsplit[2]
+    comp = _comp.toLowerCase(), // case insensitive comparators
+    _value = strsplit[2]
 
   if (!_.includes(comparators, comp)) {
     throw new Error('unknown comparator ' + _comp)
@@ -133,55 +139,57 @@ function validateAndTransformFormula(str) {
   // only two formulae for Worker_Adult:
   // Worker_Adult = 0
   // Worker_Adult = 1
-  if (name == 'Worker_Adult' && (comp != '=' || !_.includes(['0','1'],_value)  )) {
+  if (name == 'Worker_Adult' && (comp != '=' || !_.includes(['0', '1'], _value))) {
     throw new Error('For Worker_Adult qualification, specify either:\nWorker_Adult = 1 (for adults)\nWorker_Adult = 0 (for children)')
   }
 
-  var ret = {Name: name,
-             Comparator: comparatorTransforms[comp]}
+  var ret = {
+    Name: name,
+    Comparator: comparatorTransforms[comp]
+  }
   if (!_.isUndefined(value)) {
 
     if (name == 'Worker_Locale') {
       value = value.map(validateAndTransformLocale)
     } else {
-      value = value.map(function(x) { return parseInt(x) })
+      value = value.map(function (x) { return parseInt(x) })
     }
 
     _.extend(ret,
-             _.fromPairs([[name == 'Worker_Locale' ? 'LocaleValues' : 'IntegerValues', value]]))
+      _.fromPairs([[name == 'Worker_Locale' ? 'LocaleValues' : 'IntegerValues', value]]))
   }
 
   return ret
 }
 
 // HT https://gist.github.com/andrei-m/982927
-function editDistance(a, b){
-  if(a.length == 0) return b.length;
-  if(b.length == 0) return a.length;
+function editDistance(a, b) {
+  if (a.length == 0) return b.length;
+  if (b.length == 0) return a.length;
 
   var matrix = [];
 
   // increment along the first column of each row
   var i;
-  for(i = 0; i <= b.length; i++){
+  for (i = 0; i <= b.length; i++) {
     matrix[i] = [i];
   }
 
   // increment each column in the first row
   var j;
-  for(j = 0; j <= a.length; j++){
+  for (j = 0; j <= a.length; j++) {
     matrix[0][j] = j;
   }
 
   // Fill in the rest of the matrix
-  for(i = 1; i <= b.length; i++){
-    for(j = 1; j <= a.length; j++){
-      if(b.charAt(i-1) == a.charAt(j-1)){
-        matrix[i][j] = matrix[i-1][j-1];
+  for (i = 1; i <= b.length; i++) {
+    for (j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) == a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
       } else {
-        matrix[i][j] = Math.min(matrix[i-1][j-1] + 1, // substitution
-                                Math.min(matrix[i][j-1] + 1, // insertion
-                                         matrix[i-1][j] + 1)); // deletion
+        matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, // substitution
+          Math.min(matrix[i][j - 1] + 1, // insertion
+            matrix[i - 1][j] + 1)); // deletion
       }
     }
   }
@@ -190,17 +198,24 @@ function editDistance(a, b){
 };
 
 
+function premiumHelp() {
+  console.log('here is a list of premium qualifications')
+  console.table(_.map(premiumQualifications, function (x) { return _.pick(x, 'name', 'feeInDollars') }))
+}
+
 function formulaHelp() {
   console.log('The syntax for a qualification formula is:')
   console.log('<NAME> <COMPARATOR> <VALUE>')
 
 
-  var namesList = systemQualNames.map(function(name) { return ' ' + name }).join('\n')
+  var namesList = systemQualNames.map(function (name) { return ' ' + name }).join('\n')
   console.log(`\nNames provided by MTurk are:\n${namesList}`)
-  console.log(`You can also use the name of a custom qualification you have created`);
+  console.log(`You can also use the name of a Premium qualification or a custom qualification you have created`);
+  console.log(`To use Premium qualifications, you should enclose the name of the qualification in quotes, e.g., "Parenthood Status"`)
+  console.log(`To see a full list of premium qualifications, use the command "premium-help"`)
 
 
-  var comparatorsList = comparators.map(function(name) { return ' ' + name}).join('\n')
+  var comparatorsList = comparators.map(function (name) { return ' ' + name }).join('\n')
   console.log(`\nComparators are: \n${comparatorsList}\n`)
 
   console.log('Value can be:')
@@ -215,17 +230,17 @@ function readLines(filename) {
   var contents;
   try {
     contents = fs.readFileSync(filename, 'UTF8')
-  } catch(e) {
+  } catch (e) {
     console.error('Error reading file')
     console.error(e.message)
   }
   // ignore empty whitespace or lines starting with #
   var lines = _.reject(contents.split('\n'),
-                       function(str) { return /^\s*$/.test(str) || /^#/.test(str) })
+    function (str) { return /^\s*$/.test(str) || /^#/.test(str) })
   return lines;
 }
 
-var askQual = function(message) {
+var askQual = function (message) {
   if (typeof message == 'undefined') {
     if (quals.length == 0) {
       message = `Enter qualification formula\n(type 'help' for reminders on syntax, 'list' to see current formulae, 'done' to finish qualifications, or 'load <filename>' to read qualifications from a file on disk.)`
@@ -239,7 +254,11 @@ var askQual = function(message) {
   if (response == 'help') {
     formulaHelp()
     return askQual()
-  } else if (/^load/.test(response)) {
+  } else if (response == 'premium-help') {
+    premiumHelp()
+    return askQual()
+  }
+  else if (/^load/.test(response)) {
     var filename = response.replace(/^load\s+/, "")
     var lines = readLines(filename);
 
@@ -249,7 +268,7 @@ var askQual = function(message) {
 
       console.log(`Added qualifications from ${filename}:\n${responses.join('\n')}`)
 
-    } catch(e) {
+    } catch (e) {
       console.error('Error loading from file:')
       console.error(e.message)
     } finally {
@@ -260,9 +279,9 @@ var askQual = function(message) {
       console.log('No qualifications entered\n')
     } else {
       console.log('Qualifications entered so far:')
-      responses.forEach(function(resp,i) {
-        console.log(`${i+1}. ${resp}`)
-      } )
+      responses.forEach(function (resp, i) {
+        console.log(`${i + 1}. ${resp}`)
+      })
       console.log('')
     }
 
